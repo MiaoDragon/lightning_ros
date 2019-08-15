@@ -76,7 +76,18 @@ MANAGE_LIBRARY = "manage_path_library"
 
 class Lightning:
     def __init__(self):
-        rospy.wait_for_service(SET_PLANNING_SCENE_DIFF_NAME); #make sure the environment server is ready before starting up
+        # depending on the argument framework_type, use different classes and settings
+        framework_type = rospy.get_param('framework_type')
+        if framework_type == 'ompl':
+            ShortcutPathWrapper = tools.OMPLPathTools.ShortcutPathWrapper
+            DrawPointsWrapper = tools.OMPLPathTools.DrawPointsWrapper
+        elif framework_type == 'moveit':
+            # Make sure that the moveit server is ready before starting up
+            rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
+            rospy.wait_for_service(SET_PLANNING_SCENE_DIFF_NAME); #make sure the environment server is ready before starting up
+            ShortcutPathWrapper = tools.OMPLPathTools.ShortcutPathWrapper
+            DrawPointsWrapper = tools.OMPLPathTools.DrawPointsWrapper
+            
         # Initialize clients for planners.
         self.rr_client = actionlib.SimpleActionClient(RR_NODE_NAME, RRAction)
         self.pfs_client = actionlib.SimpleActionClient(PFS_NODE_NAME, PFSAction)
@@ -356,4 +367,3 @@ if __name__ == "__main__":
         rospy.spin();
     except rospy.ROSInterruptException:
         pass;
-

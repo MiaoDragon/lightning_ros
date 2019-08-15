@@ -52,8 +52,8 @@ import threading
 from lightning.msg import PFSAction, PFSResult
 from lightning.msg import StopPlanning, Float64Array
 
-from tools.PathTools import PlanTrajectoryWrapper
-
+import tools.PathTools
+import tools.OMPLPathTools
 # The name of this node.
 PFS_NODE_NAME = "pfs_node";
 # The topic to Publish which tells the actual planners to stop.
@@ -65,8 +65,15 @@ PLANNING_SCENE_SERV_NAME = "/get_planning_scene";
 
 class PFSNode:
     def __init__(self):
-        # Make sure that the moveit server is ready before starting up
-        rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
+        # depending on the argument framework_type, use different classes and settings
+        framework_type = rospy.get_param('framework_type')
+        if framework_type == 'ompl':
+            PlanTrajectoryWrapper = tools.OMPLPathTools.PlanTrajectoryWrapper
+        elif framework_type == 'moveit':
+            # Make sure that the moveit server is ready before starting up
+            rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
+            PlanTrajectoryWrapper = tools.OMPLPathTools.PlanTrajectoryWrapper
+
         self.plan_trajectory_wrapper = PlanTrajectoryWrapper("pfs")
         self.planner_config_name = rospy.get_param("planner_config_name")
         self.stop_lock = threading.Lock()
@@ -146,5 +153,3 @@ if __name__ == "__main__":
         rospy.spin()
     except rospy.ROSInterruptException:
         pass;
-
-

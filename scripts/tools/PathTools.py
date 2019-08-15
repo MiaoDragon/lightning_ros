@@ -81,51 +81,6 @@ class PlanTrajectoryWrapper:
             num_planners (int): The number of planner nodes that are being used.
         """
         # depending on argument, choose to use either OMPL direct planning or MoveIt
-        self.framework = rospy.get_param("framework_type")
-        if self.framework == 'ompl':
-            ## add OMPL setting for different environments
-            self.env_name = rospy.get_param('env_name')
-            if self.env_name == 's2d':
-                data_loader = data_loader_2d
-                IsInCollision = plan_s2d.IsInCollision
-                # create an SE2 state space
-                space = ob.RealVectorStateSpace(2)
-                bounds = ob.RealVectorBounds(2)
-                bounds.setLow(-20)
-                bounds.setHigh(20)
-                space.setBounds(bounds)
-                time_limit = 20.
-            elif self.env_name == 'c2d':
-                data_loader = data_loader_2d
-                IsInCollision = plan_c2d.IsInCollision
-                # create an SE2 state space
-                space = ob.RealVectorStateSpace(2)
-                bounds = ob.RealVectorBounds(2)
-                bounds.setLow(-20)
-                bounds.setHigh(20)
-                space.setBounds(bounds)
-                time_limit = 10.
-            elif self.env_name == 'r2d':
-                data_loader = data_loader_r2d
-                IsInCollision = plan_r2d.IsInCollision
-                # create an SE2 state space
-                space = ob.SE2StateSpace()
-                bounds = ob.RealVectorBounds(2)
-                bounds.setLow(-20)
-                bounds.setHigh(20)
-                space.setBounds(bounds)
-                time_limit = 50.
-            elif self.env_name == 'r3d':
-                data_loader = data_loader_r3d
-                IsInCollision = plan_r3d.IsInCollision
-                # create an SE2 state space
-                space = ob.RealVectorStateSpace(3)
-                bounds = ob.RealVectorBounds(3)
-                bounds.setLow(-20)
-                bounds.setHigh(20)
-                space.setBounds(bounds)
-                time_limit = 20.
-
         self.planners = ["%s_planner_node%i/%s" % (node_type, i, PLANNER_NAME) for i in xrange(num_planners)]
         rospy.loginfo("Initializaing %i planners for %s" % (num_planners, node_type))
         self.planners_available = [True for i in xrange(num_planners)]
@@ -180,16 +135,7 @@ class PlanTrajectoryWrapper:
 
     #planner to get new trajectory from start_point to goal_point
     #planner_number is the number received from acquire_planner
-    def plan_trajectory(self, *args):
-        if self.framework == 'ompl':
-            self.plan_trajectory_ompl(args)
-        elif self.framework == 'moveit':
-            self.plan_trajectory_moveit(args)
-    def plan_trajectory_ompl(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
-        # get info of obstacles from rostopic
-
-        pass
-    def plan_trajectory_moveit(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
+    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
         """
           Given a start and goal point, returns the planned path.
 

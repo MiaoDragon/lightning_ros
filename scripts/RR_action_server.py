@@ -51,7 +51,8 @@ import rospy
 import actionlib
 import threading
 
-from tools.PathTools import PlanTrajectoryWrapper, InvalidSectionWrapper, DrawPointsWrapper
+import tools.PathTools# import PlanTrajectoryWrapper, InvalidSectionWrapper, DrawPointsWrapper
+import tools.OMPLPathTools
 from pathlib.PathLibrary import *
 from lightning.msg import Float64Array, RRAction, RRResult
 from lightning.msg import StopPlanning, RRStats
@@ -73,6 +74,19 @@ STATE_RETRIEVE, STATE_REPAIR, STATE_RETURN_PATH, STATE_FINISHED, STATE_FINISHED 
 
 class RRNode:
     def __init__(self):
+        # depending on the argument framework_type, use different classes and settings
+        framework_type = rospy.get_param('framework_type')
+        if framework_type == 'ompl':
+            PlanTrajectoryWrapper = tools.OMPLPathTools.PlanTrajectoryWrapper
+            InvalidSectionWrapper = tools.OMPLPathTools.InvalidSectionWrapper
+            DrawPointsWrapper = tools.OMPLPathTools.DrawPointsWrapper
+        elif framework_type == 'moveit':
+            # Make sure that the moveit server is ready before starting up
+            rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
+            PlanTrajectoryWrapper = tools.PathTools.PlanTrajectoryWrapper
+            InvalidSectionWrapper = tools.PathTools.InvalidSectionWrapper
+            DrawPointsWrapper = tools.PathTools.DrawPointsWrapper
+            
         # Retrieve ROS parameters and configuration and cosntruct various objects.
         self.robot_name = rospy.get_param("robot_name")
         self.planner_config_name = rospy.get_param("planner_config_name")
