@@ -84,6 +84,17 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         """
           Constructor for OMPLPlanTrajectoryWrapper.
 
+          In orignal PathTools, it is using multi-threading with multiple ROS services/machines.
+          Hence it required locks to record if each service/machine is idle or busy.
+          However, in this version we don't need to worry about that, since the planning function
+          does not utilize any ROS services. It is only calling the OMPL library code (if there
+          is no service involved in OMPL). And all shared variables won't be in danger
+          in the trajectory_planning function. Hence it is safe to call many trajectory planning
+          jobs, without the need of using locks.
+          However, for API safety and future extension (we may use neural network in this setting)
+          we'll still use the locks.
+          But it can be removed from this library.
+
           Args:
             node_type (string): The type of planner that this is being used by,
               generally "pfs" or "rr".
@@ -135,7 +146,8 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             time_limit = 20.
         self.IsInCollision = IsInCollision
         self.space = space
-        self.si = ob.SpaceInformation(space)
+        # for thread-safety, should not modify shared vars
+        #self.si = ob.SpaceInformation(space)
 
     def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
         """
@@ -165,13 +177,14 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             goal[k] = goal_point[k]
         def isStateValid(state):
             return not IsInCollision(state, obc)
-        self.si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
-        self.si.setup()
-        pdef = ob.ProblemDefinition(self.si)
+        si = ob.SpaceInformation(self.space)
+        si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+        si.setup()
+        pdef = ob.ProblemDefinition(si)
         pdef.setStartAndGoalStates(start, goal)
-        pdef.setOptimizationObjective(getPathLengthObjective(self.si, data_length))
+        #pdef.setOptimizationObjective(getPathLengthObjective(self.si, data_length))
 
-        ss = allocatePlanner(self.si, self.planner_name)
+        ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
         solved = ss.solve(time_limit)
