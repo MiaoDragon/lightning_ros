@@ -53,6 +53,17 @@ from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, P
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest
 from moveit_msgs.msg import JointConstraint, Constraints
 import PathTools
+
+from ompl import base as ob
+from ompl import geometric as og
+import plan_c2d, plan_s2d, plan_r2d, plan_r3d
+import data_loader_2d, data_loader_r2d, data_loader_r3d
+import argparse
+import pickle
+import sys
+import time
+import os
+import numpy as np
 # Names of Topics/Services to be advertised/used by these wrappers.
 # The name of the collision checking service.
 COLLISION_CHECK = "collision_check"
@@ -81,8 +92,9 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         PathTools.PlanTrajectoryWrapper.__init__(self, node_type, num_planners)
         ## add OMPL setting for different environments
         self.env_name = rospy.get_param('env_name')
+        self.planner = rospy.get_param('planner_name')
         if self.env_name == 's2d':
-            data_loader = data_loader_2d
+            #data_loader = data_loader_2d
             IsInCollision = plan_s2d.IsInCollision
             # create an SE2 state space
             space = ob.RealVectorStateSpace(2)
@@ -92,7 +104,7 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             space.setBounds(bounds)
             time_limit = 20.
         elif self.env_name == 'c2d':
-            data_loader = data_loader_2d
+            #data_loader = data_loader_2d
             IsInCollision = plan_c2d.IsInCollision
             # create an SE2 state space
             space = ob.RealVectorStateSpace(2)
@@ -102,7 +114,7 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             space.setBounds(bounds)
             time_limit = 10.
         elif self.env_name == 'r2d':
-            data_loader = data_loader_r2d
+            #data_loader = data_loader_r2d
             IsInCollision = plan_r2d.IsInCollision
             # create an SE2 state space
             space = ob.SE2StateSpace()
@@ -112,7 +124,7 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             space.setBounds(bounds)
             time_limit = 50.
         elif self.env_name == 'r3d':
-            data_loader = data_loader_r3d
+            #data_loader = data_loader_r3d
             IsInCollision = plan_r3d.IsInCollision
             # create an SE2 state space
             space = ob.RealVectorStateSpace(3)
@@ -121,15 +133,88 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             bounds.setHigh(20)
             space.setBounds(bounds)
             time_limit = 20.
+        self.IsInCollision = IsInCollision
+        self.space = space
+        self.si = ob.SpaceInformation(space)
+
     def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
         """
-            Use OMPL library for planning.
+            Use OMPL library for planning. Obtain obstacle information from rostopic for
+            collision checking
         """
-        pass
+        # obtain obstacle information through rostopic
+        rospy.loginfo("Plan Trajectory Wrapper: waiting for obstacle message...")
+        obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
+        # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
+        obc = [obc_i.values for obc_i in obc.points]
+        obc = np.array(obc)
+        rospy.loginfo("Plan Trajectory Wrapper: obstacle message received.")
+
+        # reshape
+        # plan
+        IsInCollision = self.IsInCollision
+        rospy.loginfo("Plan Trajectory Wrapper: start planning...")
+        # create a simple setup object
+        start = ob.State(self.space)
+        # we can pick a random start state...
+        # ... or set specific values
+        for k in range(len(s)):
+            start[k] = start_point[k]
+        goal = ob.State(self.space)
+        for k in range(len(g)):
+            goal[k] = goal_point[k]
+        def isStateValid(state):
+            return not IsInCollision(state, obc)
+        self.si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+        self.si.setup()
+        pdef = ob.ProblemDefinition(self.si)
+        pdef.setStartAndGoalStates(start, goal)
+        pdef.setOptimizationObjective(getPathLengthObjective(self.si, data_length))
+
+        ss = allocatePlanner(self.si, self.planner_name)
+        ss.setProblemDefinition(pdef)
+        ss.setup()
+        solved = ss.solve(time_limit)
+        if solved:
+            rospy.loginfo("Plan Trajectory Wrapper: OMPL Planner solved successfully.")
+            # obtain planned path
+            ompl_path = pdef.getSolutionPath().getStates()
+            solutions = np.zeros((len(ompl_path),2))
+            for k in range(len(ompl_path)):
+                solutions[k][0] = float(ompl_path[k][0])
+                solutions[k][1] = float(ompl_path[k][1])
+            return solutions
+
 class ShortcutPathWrapper(PathTools.ShortcutPathWrapper):
     """
       This is a very thin wrapper over the path shortcutting service.
     """
+    def __init__(self):
+        PathTools.ShortcutPathWrapper.__init__(self)
+        ## add OMPL setting for different environments
+        self.env_name = rospy.get_param('env_name')
+        self.planner = rospy.get_param('planner_name')
+        if self.env_name == 's2d':
+            #data_loader = data_loader_2d
+            IsInCollision = plan_s2d.IsInCollision
+            # create an SE2 state space
+            time_limit = 20.
+        elif self.env_name == 'c2d':
+            #data_loader = data_loader_2d
+            IsInCollision = plan_c2d.IsInCollision
+            # create an SE2 state space
+            time_limit = 10.
+        elif self.env_name == 'r2d':
+            #data_loader = data_loader_r2d
+            IsInCollision = plan_r2d.IsInCollision
+            # create an SE2 state space
+            time_limit = 50.
+        elif self.env_name == 'r3d':
+            #data_loader = data_loader_r3d
+            IsInCollision = plan_r3d.IsInCollision
+            # create an SE2 state space
+            time_limit = 20.
+        self.IsInCollision = IsInCollision
 
     def shortcut_path(self, original_path, group_name):
         """
@@ -143,18 +228,36 @@ class ShortcutPathWrapper(PathTools.ShortcutPathWrapper):
           Return:
             list of list of float: The shortcutted version of the path.
         """
-        shortcut_path_client = rospy.ServiceProxy(SHORTCUT_PATH_NAME, PathShortcut)
-        shortcut_req = PathShortcutRequest()
-        shortcut_req.path = [Float64Array(p) for p in original_path]
-        shortcut_req.group_name = group_name
-        rospy.wait_for_service(SHORTCUT_PATH_NAME)
-        response = shortcut_path_client(shortcut_req)
-        return [p.values for p in response.new_path]
+        # obtain obstacle information through rostopic
+        rospy.loginfo("Shortcut Path Wrapper: waiting for obstacle message...")
+        obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
+        # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
+        obc = [obc_i.values for obc_i in obc.points]
+        obc = np.array(obc)
+        rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
+        path = lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
+        return path
 
 class InvalidSectionWrapper(PathTools.InvalidSectionWrapper):
     """
-      This is a very thin wrapper over the collision checking service.
+        This uses our user-defined collision checker
     """
+    def __init__(self):
+        PathTools.InvalidSectionWrapper.__init__(self)
+        ## add OMPL setting for different environments
+        self.env_name = rospy.get_param('env_name')
+        self.planner = rospy.get_param('planner_name')
+        if self.env_name == 's2d':
+            IsInCollision = plan_s2d.IsInCollision
+        elif self.env_name == 'c2d':
+            IsInCollision = plan_c2d.IsInCollision
+        elif self.env_name == 'r2d':
+            IsInCollision = plan_r2d.IsInCollision
+        elif self.env_name == 'r3d':
+            IsInCollision = plan_r3d.IsInCollision
+        self.IsInCollision = IsInCollision
+        self.space = space
+        self.si = ob.SpaceInformation(space)
 
     def get_invalid_sections_for_path(self, original_path, group_name):
         """
@@ -188,14 +291,36 @@ class InvalidSectionWrapper(PathTools.InvalidSectionWrapper):
             list of list of pairs of indicies, where each index in a pair is the
               start and end of an invalid section.
         """
-        collision_check_client = rospy.ServiceProxy(COLLISION_CHECK, CollisionCheck)
-        cc_req = CollisionCheckRequest();
-        cc_req.paths = [Float64Array2D([Float64Array(point) for point in path]) for path in orig_paths];
-        cc_req.group_name = group_name
-        rospy.loginfo("Plan Trajectory Wrapper: sending request to collision checker")
-        rospy.wait_for_service(COLLISION_CHECK)
-        response = collision_check_client(cc_req);
-        return [[sec.values for sec in individualPathSections.points] for individualPathSections in response.invalid_sections];
+        # obtain obstacle information through rostopic
+        rospy.loginfo("Invalid Section Wrapper: waiting for obstacle message...")
+        obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
+        # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
+        obc = [obc_i.values for obc_i in obc.points]
+        obc = np.array(obc)
+        rospy.loginfo("Invalid Section Wrapper: obstacle message received.")
+
+        # for each path, check the invalid sections
+        inv_sec_paths = []
+        for orig_path in orig_paths:
+            inv_sec_path = []
+            start = orig_path[0]
+            end = orig_path[0]
+            mode = True # valid till now
+            for point in orig_path:
+                if self.IsInCollision(point, obc):
+                    mode = False
+                else:
+                    if mode:
+                        # if valid till now, update start
+                        start = point
+                    else:
+                        # if not valid, then update end
+                        end = point
+                        start = point
+                        inv_sec_path.append([start, end])
+                        mode = True  # become valid again
+            inv_sec_paths.append(inv_sec_path)
+        return inv_sec_paths
 
 class DrawPointsWrapper(PathTools.DrawPointsWrapper):
     pass
