@@ -58,7 +58,8 @@ from lightning.msg import RRAction, RRGoal, PFSAction, PFSGoal, Float64Array, St
 from lightning.srv import ManagePathLibrary, ManagePathLibraryRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanResponse
 from std_msgs.msg import Float32
-from tools.PathTools import ShortcutPathWrapper, DrawPointsWrapper
+import tools.PathTools
+import tools.OMPLPathTools
 from trajectory_msgs.msg import JointTrajectoryPoint
 
 # Node names for RR and PFS plan retrieval.
@@ -73,35 +74,6 @@ LIGHTNING_SERVICE = "lightning_get_path"
 SET_PLANNING_SCENE_DIFF_NAME = "/get_planning_scene";
 # Service name for managing path library.
 MANAGE_LIBRARY = "manage_path_library"
-def allocatePlanner(si, plannerType):
-    if plannerType.lower() == "bfmtstar":
-        return og.BFMT(si)
-    elif plannerType.lower() == "bitstar":
-        planner = og.BITstar(si)
-        planner.setPruning(False)
-        planner.setSamplesPerBatch(200)
-        planner.setRewireFactor(20.)
-        return planner
-    elif plannerType.lower() == "fmtstar":
-        return og.FMT(si)
-    elif plannerType.lower() == "informedrrtstar":
-        return og.InformedRRTstar(si)
-    elif plannerType.lower() == "prmstar":
-        return og.PRMstar(si)
-    elif plannerType.lower() == "rrtstar":
-        return og.RRTstar(si)
-    elif plannerType.lower() == "sorrtstar":
-        return og.SORRTstar(si)
-    elif plannerType.lower() == 'rrtconnect':
-        return og.RRTConnect(si)
-    else:
-        ou.OMPL_ERROR("Planner-type is not implemented in allocation function.")
-
-
-def getPathLengthObjective(si, length):
-    obj = ob.PathLengthOptimizationObjective(si)
-    obj.setCostThreshold(ob.Cost(length))
-    return obj
 class Lightning:
     def __init__(self):
         # depending on the argument framework_type, use different classes and settings

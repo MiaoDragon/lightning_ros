@@ -72,7 +72,7 @@ class PFSNode:
         elif framework_type == 'moveit':
             # Make sure that the moveit server is ready before starting up
             rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
-            PlanTrajectoryWrapper = tools.OMPLPathTools.PlanTrajectoryWrapper
+            PlanTrajectoryWrapper = tools.PathTools.PlanTrajectoryWrapper
 
         self.plan_trajectory_wrapper = PlanTrajectoryWrapper("pfs")
         self.planner_config_name = rospy.get_param("planner_config_name")

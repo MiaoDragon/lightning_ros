@@ -56,6 +56,7 @@ import PathTools
 
 from ompl import base as ob
 from ompl import geometric as og
+import plan_general
 import plan_c2d, plan_s2d, plan_r2d, plan_r3d
 import data_loader_2d, data_loader_r2d, data_loader_r3d
 import argparse
@@ -73,6 +74,29 @@ SHORTCUT_PATH_NAME = "shortcut_path"
 DISPLAY_POINTS = "draw_points"
 # Name of the planner_stoppable services advertised from various lightning nodes.
 PLANNER_NAME = "plan_kinematic_path"
+def allocatePlanner(si, plannerType):
+    if plannerType.lower() == "bfmtstar":
+        return og.BFMT(si)
+    elif plannerType.lower() == "bitstar":
+        planner = og.BITstar(si)
+        planner.setPruning(False)
+        planner.setSamplesPerBatch(200)
+        planner.setRewireFactor(20.)
+        return planner
+    elif plannerType.lower() == "fmtstar":
+        return og.FMT(si)
+    elif plannerType.lower() == "informedrrtstar":
+        return og.InformedRRTstar(si)
+    elif plannerType.lower() == "prmstar":
+        return og.PRMstar(si)
+    elif plannerType.lower() == "rrtstar":
+        return og.RRTstar(si)
+    elif plannerType.lower() == "sorrtstar":
+        return og.SORRTstar(si)
+    elif plannerType.lower() == 'rrtconnect':
+        return og.RRTConnect(si)
+    else:
+        ou.OMPL_ERROR("Planner-type is not implemented in allocation function.")
 
 class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
     """
@@ -103,7 +127,7 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         PathTools.PlanTrajectoryWrapper.__init__(self, node_type, num_planners)
         ## add OMPL setting for different environments
         self.env_name = rospy.get_param('env_name')
-        self.planner = rospy.get_param('planner_name')
+        self.planner_name = rospy.get_param('planner_name')
         if self.env_name == 's2d':
             #data_loader = data_loader_2d
             IsInCollision = plan_s2d.IsInCollision
@@ -144,6 +168,7 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             bounds.setHigh(20)
             space.setBounds(bounds)
             time_limit = 20.
+        self.time_limit = 5
         self.IsInCollision = IsInCollision
         self.space = space
         # for thread-safety, should not modify shared vars
@@ -170,10 +195,10 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         start = ob.State(self.space)
         # we can pick a random start state...
         # ... or set specific values
-        for k in range(len(s)):
+        for k in range(len(start_point)):
             start[k] = start_point[k]
         goal = ob.State(self.space)
-        for k in range(len(g)):
+        for k in range(len(goal_point)):
             goal[k] = goal_point[k]
         def isStateValid(state):
             return not IsInCollision(state, obc)
@@ -187,7 +212,7 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
-        solved = ss.solve(time_limit)
+        solved = ss.solve(self.time_limit)
         if solved:
             rospy.loginfo("Plan Trajectory Wrapper: OMPL Planner solved successfully.")
             # obtain planned path
@@ -196,14 +221,13 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             for k in range(len(ompl_path)):
                 solutions[k][0] = float(ompl_path[k][0])
                 solutions[k][1] = float(ompl_path[k][1])
-            return solutions
+            return solutions.tolist()
 
 class ShortcutPathWrapper(PathTools.ShortcutPathWrapper):
     """
       This is a very thin wrapper over the path shortcutting service.
     """
     def __init__(self):
-        PathTools.ShortcutPathWrapper.__init__(self)
         ## add OMPL setting for different environments
         self.env_name = rospy.get_param('env_name')
         self.planner = rospy.get_param('planner_name')
@@ -247,8 +271,10 @@ class ShortcutPathWrapper(PathTools.ShortcutPathWrapper):
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
+        original_path = np.array(original_path)
         rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
-        path = lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
+        path = plan_general.lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
+        path = np.array(path).tolist()
         return path
 
 class InvalidSectionWrapper(PathTools.InvalidSectionWrapper):
@@ -256,7 +282,6 @@ class InvalidSectionWrapper(PathTools.InvalidSectionWrapper):
         This uses our user-defined collision checker
     """
     def __init__(self):
-        PathTools.InvalidSectionWrapper.__init__(self)
         ## add OMPL setting for different environments
         self.env_name = rospy.get_param('env_name')
         self.planner = rospy.get_param('planner_name')
@@ -269,9 +294,6 @@ class InvalidSectionWrapper(PathTools.InvalidSectionWrapper):
         elif self.env_name == 'r3d':
             IsInCollision = plan_r3d.IsInCollision
         self.IsInCollision = IsInCollision
-        self.space = space
-        self.si = ob.SpaceInformation(space)
-
     def get_invalid_sections_for_path(self, original_path, group_name):
         """
           Returns the invalid sections for a single path.
@@ -311,26 +333,27 @@ class InvalidSectionWrapper(PathTools.InvalidSectionWrapper):
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
         rospy.loginfo("Invalid Section Wrapper: obstacle message received.")
-
+        # transform from orig_paths
         # for each path, check the invalid sections
         inv_sec_paths = []
         for orig_path in orig_paths:
             inv_sec_path = []
-            start = orig_path[0]
-            end = orig_path[0]
+            start_i = 0
+            end_i = 0
             mode = True # valid till now
-            for point in orig_path:
+            for point_i in range(len(orig_path)):
+                point = orig_path[point_i]
                 if self.IsInCollision(point, obc):
                     mode = False
                 else:
                     if mode:
                         # if valid till now, update start
-                        start = point
+                        start_i = point_i
                     else:
                         # if not valid, then update end
-                        end = point
-                        start = point
-                        inv_sec_path.append([start, end])
+                        end_i = point_i
+                        start_i = point_i
+                        inv_sec_path.append([start_i, end_i])
                         mode = True  # become valid again
             inv_sec_paths.append(inv_sec_path)
         return inv_sec_paths

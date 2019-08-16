@@ -7,9 +7,9 @@
         <param name="draw_points" value="false" />
         <param name="publish_stats" value="false" />
         <remap from="register_planning_scene" to="/register_planning_scene" />
-        <param name="framework_type" default="moveit" />
-        <param name="env_name" default="pr2" />
-        <param name="planner_name" default="rrtstar" />
+        <param name="framework_type" value="moveit" />
+        <param name="env_name" value="pr2" />
+        <param name="planner_name" value="rrtstar" />
         <!-- returns invalid sections of paths -->
         <node name="collision_check_service" pkg="lightning" type="collision_check_service" output="screen">
             <param name="num_threads" value="4" />

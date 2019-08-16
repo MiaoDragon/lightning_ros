@@ -25,7 +25,9 @@ def steerTo(start, end, obc, IsInCollision, step_sz=DEFAULT_STEP):
     #print(end)
     #start_t = time.time()
     delta = end - start  # change
-    delta = delta.numpy()
+    if not isinstance(delta, np.ndarray):
+        # then is torch tensor
+        delta = delta.numpy()
     total_dist = np.linalg.norm(delta)
     # obtain the number of segments (start to end-1)
     # the number of nodes including start and end is actually num_segs+1
@@ -36,7 +38,11 @@ def steerTo(start, end, obc, IsInCollision, step_sz=DEFAULT_STEP):
     # obtain the change for each segment
     delta_seg = delta / num_segs
     # initialize segment
-    seg = start.numpy()
+    if not isinstance(delta, np.ndarray):
+        # then is torch tensor
+        seg = start.numpy()
+    else:
+        seg = start
     # check for each segment, if they are in collision
     for i in range(num_segs+1):
         #print(seg)

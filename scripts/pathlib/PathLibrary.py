@@ -39,8 +39,8 @@ import roslib
 import rospy
 import actionlib
 
-from tools.PathTools import InvalidSectionWrapper
-
+import tools.PathTools
+import tools.OMPLPathTools
 import math
 import string
 import random
@@ -88,6 +88,13 @@ class PathLibrary:
         self.step_size = step_size
         self.new_node_size, self.new_sg_node_size = node_size, sg_node_size
         self.dtw_dist = dtw_dist
+
+        framework_type = rospy.get_param('framework_type')
+        if framework_type == 'ompl':
+            InvalidSectionWrapper = tools.OMPLPathTools.InvalidSectionWrapper
+        elif framework_type == 'moveit':
+            # Make sure that the moveit server is ready before starting up
+            InvalidSectionWrapper = tools.PathTools.InvalidSectionWrapper
         self.invalid_section_wrapper = InvalidSectionWrapper()
         self.split_paths_function = self._largest_range_split #self._consecutive_split
 
