@@ -52,6 +52,7 @@ from lightning.msg import Float64Array, Float64Array2D, DrawPoints
 from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest
 from moveit_msgs.msg import JointConstraint, Constraints
+from std_msgs.msg import Float64
 import PathTools
 
 from ompl import base as ob
@@ -65,6 +66,7 @@ import sys
 import time
 import os
 import numpy as np
+import time
 # Names of Topics/Services to be advertised/used by these wrappers.
 # The name of the collision checking service.
 COLLISION_CHECK = "collision_check"
@@ -97,6 +99,11 @@ def allocatePlanner(si, plannerType):
         return og.RRTConnect(si)
     else:
         ou.OMPL_ERROR("Planner-type is not implemented in allocation function.")
+
+def getPathLengthObjective(si, length):
+    obj = ob.PathLengthOptimizationObjective(si)
+    obj.setCostThreshold(ob.Cost(length))
+    return obj
 
 class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
     """
@@ -137,7 +144,6 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             bounds.setLow(-20)
             bounds.setHigh(20)
             space.setBounds(bounds)
-            time_limit = 20.
         elif self.env_name == 'c2d':
             #data_loader = data_loader_2d
             IsInCollision = plan_c2d.IsInCollision
@@ -147,7 +153,6 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             bounds.setLow(-20)
             bounds.setHigh(20)
             space.setBounds(bounds)
-            time_limit = 10.
         elif self.env_name == 'r2d':
             #data_loader = data_loader_r2d
             IsInCollision = plan_r2d.IsInCollision
@@ -157,7 +162,6 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             bounds.setLow(-20)
             bounds.setHigh(20)
             space.setBounds(bounds)
-            time_limit = 50.
         elif self.env_name == 'r3d':
             #data_loader = data_loader_r3d
             IsInCollision = plan_r3d.IsInCollision
@@ -167,8 +171,6 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
             bounds.setLow(-20)
             bounds.setHigh(20)
             space.setBounds(bounds)
-            time_limit = 20.
-        self.time_limit = 5
         self.IsInCollision = IsInCollision
         self.space = space
         # for thread-safety, should not modify shared vars
@@ -186,6 +188,11 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
         rospy.loginfo("Plan Trajectory Wrapper: obstacle message received.")
+        # obtain path length through rostopic
+        rospy.loginfo("Plan Trajectory Wrapper: waiting for planning path length message...")
+        path_length = rospy.wait_for_message('planning/path_length_threshold', Float64)
+        path_length = path_length.data
+        rospy.loginfo("Plan Trajectory Wrapper: planning path length received.")
 
         # reshape
         # plan
@@ -207,12 +214,12 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         si.setup()
         pdef = ob.ProblemDefinition(si)
         pdef.setStartAndGoalStates(start, goal)
-        #pdef.setOptimizationObjective(getPathLengthObjective(self.si, data_length))
+        pdef.setOptimizationObjective(getPathLengthObjective(si, path_length))
 
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
-        solved = ss.solve(self.time_limit)
+        solved = ss.solve(planning_time)
         if solved:
             rospy.loginfo("Plan Trajectory Wrapper: OMPL Planner solved successfully.")
             # obtain planned path

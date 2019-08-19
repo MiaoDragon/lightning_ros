@@ -240,6 +240,8 @@ class Lightning:
                   stat_msg.shortcut_time = time.time() - shortcut_start
 
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
+                # set planning time to be the total time up to now
+                self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
                 self.lightning_response_ready_event.set()
 
                 self.done_lock.release()
@@ -286,6 +288,8 @@ class Lightning:
                   stat_msg.shortcut_time = time.time() - shortcut_start
 
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
+                # set planning time to be the total time up to now
+                self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
                 self.lightning_response_ready_event.set()
 
                 self.done_lock.release()
