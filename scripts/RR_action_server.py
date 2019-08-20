@@ -51,13 +51,14 @@ import rospy
 import actionlib
 import threading
 
-import tools.PathTools# import PlanTrajectoryWrapper, InvalidSectionWrapper, DrawPointsWrapper
-import tools.OMPLPathTools
+from tools import NeuralPathTools# import PlanTrajectoryWrapper, InvalidSectionWrapper, DrawPointsWrapper
+from tools import NeuralOMPLPathTools
 from pathlib.PathLibrary import *
 from lightning.msg import Float64Array, RRAction, RRResult
 from lightning.msg import StopPlanning, RRStats
+from lightning.msg import PlannerType
 from lightning.srv import ManagePathLibrary, ManagePathLibraryResponse
-
+from std_msgs.msg import UInt8
 import sys
 import pickle
 import time
@@ -77,16 +78,16 @@ class RRNode:
         # depending on the argument framework_type, use different classes and settings
         framework_type = rospy.get_param('framework_type')
         if framework_type == 'ompl':
-            PlanTrajectoryWrapper = tools.OMPLPathTools.PlanTrajectoryWrapper
-            InvalidSectionWrapper = tools.OMPLPathTools.InvalidSectionWrapper
-            DrawPointsWrapper = tools.OMPLPathTools.DrawPointsWrapper
+            PlanTrajectoryWrapper = NeuralOMPLPathTools.PlanTrajectoryWrapper
+            InvalidSectionWrapper = NeuralOMPLPathTools.InvalidSectionWrapper
+            DrawPointsWrapper = NeuralOMPLPathTools.DrawPointsWrapper
         elif framework_type == 'moveit':
             # Make sure that the moveit server is ready before starting up
             rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
-            PlanTrajectoryWrapper = tools.PathTools.PlanTrajectoryWrapper
-            InvalidSectionWrapper = tools.PathTools.InvalidSectionWrapper
-            DrawPointsWrapper = tools.PathTools.DrawPointsWrapper
-            
+            PlanTrajectoryWrapper = NeuralPathTools.PlanTrajectoryWrapper
+            InvalidSectionWrapper = NeuralPathTools.InvalidSectionWrapper
+            DrawPointsWrapper = NeuralPathTools.DrawPointsWrapper
+
         # Retrieve ROS parameters and configuration and cosntruct various objects.
         self.robot_name = rospy.get_param("robot_name")
         self.planner_config_name = rospy.get_param("planner_config_name")
@@ -126,11 +127,10 @@ class RRNode:
         self.repaired_sections[index] = section
         self.repaired_sections_lock.release()
 
-    def _call_planner(self, start, goal, planning_time):
+    def _call_classic_planner(self, start, goal, planning_time):
         """
           Calls a standard planner to plan between two points with an allowed
             planning time.
-
           Args:
             start (list of float): A joint configuration corresponding to the
               start position of the path.
@@ -141,12 +141,82 @@ class RRNode:
             path: A list of joint configurations corresponding to the planned
               path.
         """
+        rospy.loginfo('RR_action_server: Starting classic planning...')
         ret = None
         planner_number = self.plan_trajectory_wrapper.acquire_planner()
         if not self._need_to_stop():
+            classic_planner_time = time.time()
             ret = self.plan_trajectory_wrapper.plan_trajectory(start, goal, planner_number, self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name)
+            classic_planner_time = time.time() - classic_planner_time
         self.plan_trajectory_wrapper.release_planner(planner_number)
-        return ret
+        self._call_classic_planner_res = [classic_planner_time, ret]
+        rospy.loginfo('RR_action_server: Finished classic planning.')
+
+
+    def _call_neural_planner(self, start, goal, planning_time):
+        """
+          Calls a neural planner to plan between two points with an allowed
+            planning time.
+          Args:
+            start (list of float): A joint configuration corresponding to the
+              start position of the path.
+            goal (list of float): The jount configuration corresponding to the
+              goal position for the path.
+
+          Returns:
+            path: A list of joint configurations corresponding to the planned
+              path.
+        """
+        rospy.loginfo('RR_action_server: Starting neural planning...')
+        ret = None
+        planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
+        if not self._need_to_stop():
+            neural_planner_time = time.time()
+            ret = self.plan_trajectory_wrapper.neural_plan_trajectory(start, goal, planner_number, self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name)
+            neural_planner_time = time.time() - neural_planner_time
+        self.plan_trajectory_wrapper.release_neural_planner(planner_number)
+        self._call_neural_planner_res = [neural_planner_time, ret]
+        rospy.loginfo('RR_action_server: Finished neural planning.')
+
+
+    def _call_planner(self, start, goal, planning_time):
+        """
+          Use multi-threading to plan using classical and neural planners. Use the
+          result of the first completed planner.
+          Currently does not kill the other process/thread if the first one finished.
+          # TODO: add early-stopping for later planner.
+          Args:
+            start (list of float): A joint configuration corresponding to the
+              start position of the path.
+            goal (list of float): The jount configuration corresponding to the
+              goal position for the path.
+
+          Returns:
+            path: A list of joint configurations corresponding to the planned
+              path.
+        """
+        threadList = []
+        classical_planner = threading.Thread(target=self._call_classic_planner, args=(start, goal, planning_time))
+        neural_planner = threading.Thread(target=self._call_neural_planner, args=(start, goal, planning_time))
+        threadList = [classical_planner, neural_planner]
+        rospy.loginfo('RR_action_server: Starting multi-thread planning...')
+        for th in threadList:
+            th.start()
+        for th in threadList:
+            th.join()
+        rospy.loginfo('RR_action_server: Finished multi-thread planning.')
+        rospy.loginfo('RR_action_server: classical planner time: %fs' % (self._call_classic_planner_res[0]))
+        rospy.loginfo('RR_action_server: neural planner time: %fs' % (self._call_neural_planner_res[0]))
+
+        # by comparing the time of the two planners, use the result of the earlier one
+        if self._call_neural_planner_res[0] <= self._call_classic_planner_res[0]:
+            # use neural planner result
+            rospy.loginfo('RR_action_server: Using Neural Planner result.')
+            return [PlannerType.NEURAL, self._call_neural_planner_res[1]]
+        else:
+            rospy.loginfo('RR_action_server: Using Classical Planner result.')
+            return [PlannerType.CLASSIC, self._call_classic_planner_res[1]]
+
 
     def _repair_thread(self, index, start, goal, start_index, goal_index, planning_time):
         """
@@ -169,7 +239,7 @@ class RRNode:
             planning_time (float): Maximum allowed time to spend planning, in
               seconds.
         """
-        repaired_path = self._call_planner(start, goal, planning_time)
+        planner_type, repaired_path = self._call_planner(start, goal, planning_time)
         if self.draw_points:
             if repaired_path is not None and len(repaired_path) > 0:
                 rospy.loginfo("RR action server: got repaired section with start = %s, goal = %s" % (repaired_path[0], repaired_path[-1]))
@@ -263,7 +333,7 @@ class RRNode:
                     repair_state = STATE_REPAIR
             elif repair_state == STATE_REPAIR:
                 start_repair = time.time()
-                repaired = self._path_repair(projected, action_goal.allowed_planning_time.to_sec(), invalid_sections=invalid)
+                repaired_planner_type, repaired = self._path_repair(projected, action_goal.allowed_planning_time.to_sec(), invalid_sections=invalid)
                 self.stats_msg.repair_time.append(time.time() - start_repair)
                 if repaired is None:
                     rospy.loginfo("RR action server: path repair didn't finish")
@@ -275,6 +345,8 @@ class RRNode:
                 res.status.status = res.status.SUCCESS
                 res.retrieved_path = [Float64Array(p) for p in retrieved]
                 res.repaired_path = [Float64Array(p) for p in repaired]
+                res.retrieved_planner_type = PlannerType.CLASSIC#####
+                res.repaired_planner_type = repaired_planner_type
                 rospy.loginfo("RR action server: returning a path")
                 repair_state = STATE_FINISHED
                 self.stats_msg.return_time = time.time() - start_return
@@ -289,7 +361,7 @@ class RRNode:
         self.stats_pub.publish(self.stats_msg)
         self.working_lock.release()
 
-    def _path_repair(self, original_path, planning_time, invalid_sections=None, use_parallel_repairing=True):
+    def _path_repair(self, original_path, planning_time, invalid_sections=None, use_parallel_repairing=False):
         """
           Goes through each invalid section in a path and calls a planner to
             repair it, with the potential for multi-threading. Returns the
@@ -305,6 +377,7 @@ class RRNode:
             use_parallel_repairing (bool): Whether or not to use multi-threading.
 
           Returns:
+            repaired_planner_type: the planner_type used to repair. (if no need to repair, don't care)
             path: The repaired path.
         """
         zeros_tuple = tuple([0 for i in xrange(len(self.current_joint_names))])
@@ -313,6 +386,7 @@ class RRNode:
         if invalid_sections is None:
             invalid_sections = self.invalid_section_wrapper.getInvalidSectionsForPath(original_path, self.current_group_name)
         rospy.loginfo("RR action server: invalid sections: %s" % (str(invalid_sections)))
+        repaired_planner_type = PlannerType.NEURAL
         if len(invalid_sections) > 0:
             if invalid_sections[0][0] == -1:
                 rospy.loginfo("RR action server: Start is not a valid state...nothing can be done")
@@ -323,6 +397,7 @@ class RRNode:
 
             if use_parallel_repairing:
                 #multi-threaded repairing
+                ## TODO: consider how to adapt here for neural network
                 self.repaired_sections = [None for i in xrange(len(invalid_sections))]
                 #each thread replans an invalid section
                 threadList = []
@@ -349,12 +424,17 @@ class RRNode:
                 #single-threaded repairing
                 rospy.loginfo("RR action server: Got invalid sections: %s" % str(invalid_sections))
                 new_path = original_path[0:invalid_sections[0][0]]
+                # if at least one classical planner, then set to classical planner
+                repaired_planner_type = PlannerType.NEURAL
                 for i in xrange(len(invalid_sections)):
                     if not self._need_to_stop():
                         #start_invalid and end_invalid must correspond to valid states when passed to the planner
                         start_invalid, end_invalid = invalid_sections[i]
                         rospy.loginfo("RR action server: Requesting path to replace from %d to %d" % (start_invalid, end_invalid))
-                        repairedSection = self._call_planner(original_path[start_invalid], original_path[end_invalid])
+                        planner_type, repairedSection = self._call_planner(original_path[start_invalid], original_path[end_invalid])
+                        if planner_type == PlannerType.CLASSIC:
+                            repaired_planner_type = PlannerType.CLASSIC
+                        ## TODO: modify library path format to add planner type, so we can train model according to it
                         if repairedSection is None:
                             rospy.loginfo("RR action server: RR section repair was stopped or failed")
                             return None
@@ -371,7 +451,7 @@ class RRNode:
             new_path = original_path
 
         rospy.loginfo("RR action server: new trajectory has %i points" % (len(new_path)))
-        return new_path
+        return repaired_planner_type, new_path
 
     def _stop_rr_planner(self, msg):
         self._set_stop_value(True)

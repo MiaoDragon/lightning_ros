@@ -1,6 +1,8 @@
 import torch
 from torch.autograd import Variable
 import copy
+import rospy
+import os
 
 def to_var(x, volatile=False):
     if torch.cuda.is_available():
@@ -30,3 +32,44 @@ def load_seed(fname):
     # load both torch random seed, and numpy random seed
     checkpoint = torch.load(fname)
     return checkpoint['torch_seed'], checkpoint['np_seed'], checkpoint['py_seed']
+
+def create_model():
+    total_input_size = rospy.get_param('model/total_input_size')
+    AE_input_size = rospy.get_param('model/AE_input_size')
+    mlp_input_size = rospy.get_param('model/mlp_input_size')
+    output_size = rospy.get_param('model/output_size')
+    n_tasks = rospy.get_param('model/n_tasks')
+    n_memories = rospy.get_param('model/n_memories')
+    memory_strength = rospy.get_param('model/memory_strength')
+    grad_step = rospy.get_param('model/grad_step')
+    model = End2EndMPNet(total_input_size, AE_input_size, mlp_input_size, \
+            output_size, 'deep', n_tasks, n_memories, memory_strength, grad_step, \
+            CAE, MLP)
+    return model
+
+def create_optimizer(model):
+    opt_type = rospy.get_param('model/opt_type')
+    learning_rate = rospy.get_param('model/learning_rate')
+    if opt_type == 'Adagrad':
+        model.set_opt(torch.optim.Adagrad, lr=learning_rate)
+    elif opt_type == 'Adam':
+        model.set_opt(torch.optim.Adam, lr=learning_rate)
+    elif opt_type == 'SGD':
+        model.set_opt(torch.optim.SGD, lr=learning_rate, momentum=0.9)
+    elif opt_type == 'ASGD':
+        model.set_opt(torch.optim.ASGD, lr=learning_rate)
+
+def create_and_load_model(fname):
+    rospy.info('Creating and loading model...')
+    model = create_model()
+    if os.path.isfile(fname):
+        # previous trained model exists, load model
+        load_net_state(model, fname)
+    # create optimizer
+    # create this later because I'm not sure if loading previous network weights
+    # will overwrite the optimizer parameters
+    create_optimizer(model)
+    # load optimizer if there exists previous one
+    if os.path.isfile(fname):
+        load_opt_state(model, fname)
+    return model

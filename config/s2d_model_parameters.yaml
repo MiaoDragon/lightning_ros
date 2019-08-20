@@ -1,0 +1,14 @@
+mlp_arch_path: 'lightning.scripts.architecture.model'
+cae_arch_path: 'lightning.scripts.architecture.AE.CAE'
+model_path: '$(find lightning)/scripts/model/s2d/'
+model_name: 'model_s2d.pkl'
+total_input_size: 2804
+AE_input_size: 2800
+mlp_input_size: 32
+output_size: 2
+n_tasks: 1
+n_memories: 10000
+memory_strength: 0.5
+grad_step: 1
+opt_type: 'Adagrad'
+learning_rate: 0.001

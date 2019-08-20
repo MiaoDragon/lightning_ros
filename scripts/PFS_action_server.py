@@ -51,9 +51,9 @@ import threading
 
 from lightning.msg import PFSAction, PFSResult
 from lightning.msg import StopPlanning, Float64Array
-
-import tools.PathTools
-import tools.OMPLPathTools
+from lightning.msg import PlannerType
+from tools import NeuralPathTools
+from tools import NeuralOMPLPathTools
 # The name of this node.
 PFS_NODE_NAME = "pfs_node";
 # The topic to Publish which tells the actual planners to stop.
@@ -68,11 +68,11 @@ class PFSNode:
         # depending on the argument framework_type, use different classes and settings
         framework_type = rospy.get_param('framework_type')
         if framework_type == 'ompl':
-            PlanTrajectoryWrapper = tools.OMPLPathTools.PlanTrajectoryWrapper
+            PlanTrajectoryWrapper = NeuralOMPLPathTools.PlanTrajectoryWrapper
         elif framework_type == 'moveit':
             # Make sure that the moveit server is ready before starting up
             rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
-            PlanTrajectoryWrapper = tools.PathTools.PlanTrajectoryWrapper
+            PlanTrajectoryWrapper = NeuralPathTools.PlanTrajectoryWrapper
 
         self.plan_trajectory_wrapper = PlanTrajectoryWrapper("pfs")
         self.planner_config_name = rospy.get_param("planner_config_name")
@@ -91,19 +91,110 @@ class PFSNode:
         self.stop_lock.release()
         return ret
 
+    def _need_to_stop(self):
+        # alias to above function
+        self.stop_lock.acquire();
+        ret = self.stop;
+        self.stop_lock.release();
+        return ret;
+
     def _set_stop_value(self, val):
         self.stop_lock.acquire()
         self.stop = val
         self.stop_lock.release()
 
-    def _call_planner(self, start, goal, planning_time):
-        rospy.loginfo("PFS action server: acquiring planner")
+
+    def _call_classic_planner(self, start, goal, planning_time):
+        """
+          Calls a standard planner to plan between two points with an allowed
+            planning time.
+          Args:
+            start (list of float): A joint configuration corresponding to the
+              start position of the path.
+            goal (list of float): The jount configuration corresponding to the
+              goal position for the path.
+
+          Returns:
+            path: A list of joint configurations corresponding to the planned
+              path.
+        """
+        rospy.loginfo('PFS_action_server: Starting classic planning...')
+        ret = None
         planner_number = self.plan_trajectory_wrapper.acquire_planner()
-        rospy.loginfo("PFS action server: got a planner")
-        ret = self.plan_trajectory_wrapper.plan_trajectory(start, goal, planner_number, self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name)
+        if not self._need_to_stop():
+            classic_planner_time = time.time()
+            ret = self.plan_trajectory_wrapper.plan_trajectory(start, goal, planner_number, self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name)
+            classic_planner_time = time.time() - classic_planner_time
         self.plan_trajectory_wrapper.release_planner(planner_number)
-        rospy.loginfo("PFS action server: releasing planner")
-        return ret
+        self._call_classic_planner_res = [classic_planner_time, ret]
+        rospy.loginfo('PFS_action_server: Finished classic planning.')
+
+
+    def _call_neural_planner(self, start, goal, planning_time):
+        """
+          Calls a neural planner to plan between two points with an allowed
+            planning time.
+          Args:
+            start (list of float): A joint configuration corresponding to the
+              start position of the path.
+            goal (list of float): The jount configuration corresponding to the
+              goal position for the path.
+
+          Returns:
+            path: A list of joint configurations corresponding to the planned
+              path.
+        """
+        rospy.loginfo('PFS_action_server: Starting neural planning...')
+        ret = None
+        planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
+        if not self._need_to_stop():
+            neural_planner_time = time.time()
+            ret = self.plan_trajectory_wrapper.neural_plan_trajectory(start, goal, planner_number, self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name)
+            neural_planner_time = time.time() - neural_planner_time
+        self.plan_trajectory_wrapper.release_neural_planner(planner_number)
+        self._call_neural_planner_res = [neural_planner_time, ret]
+        rospy.loginfo('PFS_action_server: Finished neural planning.')
+
+
+
+    def _call_planner(self, start, goal, planning_time):
+        """
+          Use multi-threading to plan using classical and neural planners. Use the
+          result of the first completed planner.
+          Currently does not kill the other process/thread if the first one finished.
+          # TODO: 1. add loginfo
+                  2. add early-stopping for later planner.
+          Args:
+            start (list of float): A joint configuration corresponding to the
+              start position of the path.
+            goal (list of float): The jount configuration corresponding to the
+              goal position for the path.
+
+          Returns:
+            path: A list of joint configurations corresponding to the planned
+              path.
+        """
+        threadList = []
+        classical_planner = threading.Thread(target=self._call_classic_planner, args=(start, goal, planning_time))
+        neural_planner = threading.Thread(target=self._call_neural_planner, args=(start, goal, planning_time))
+        threadList = [classical_planner, neural_planner]
+        rospy.loginfo('PFS_action_server: Starting multi-thread planning...')
+        for th in threadList:
+            th.start()
+        for th in threadList:
+            th.join()
+        rospy.loginfo('PFS_action_server: Finished multi-thread planning.')
+        rospy.loginfo('PFS_action_server: classical planner time: %fs' % (self._call_classic_planner_res[0]))
+        rospy.loginfo('PFS_action_server: neural planner time: %fs' % (self._call_neural_planner_res[0]))
+        # by comparing the time of the two planners, use the result of the earlier one
+        if self._call_neural_planner_res[0] <= self._call_classic_planner_res[0]:
+            # use neural planner result
+            rospy.loginfo('PFS_action_server: Using Neural Planner result.')
+            return [PlannerType.NEURAL, self._call_neural_planner_res[1]]
+        else:
+            rospy.loginfo('PFS_action_server: Using Classical Planner result.')
+            return [PlannerType.CLASSIC, self._call_classic_planner_res[1]]
+
 
     def _get_path(self, action_goal):
         """
@@ -117,7 +208,7 @@ class PFSNode:
         self.current_joint_names = action_goal.joint_names
         self.current_group_name = action_goal.group_name
         if not self._get_stop_value():
-            unfiltered = self._call_planner(s, g, action_goal.allowed_planning_time.to_sec())
+            planner_type, unfiltered = self._call_planner(s, g, action_goal.allowed_planning_time.to_sec())
             if unfiltered is None:
                 self.pfs_server.set_succeeded(res)
                 return
@@ -130,6 +221,7 @@ class PFSNode:
             # The planner succeeded; actually return the path in the result.
             res.status.status = res.status.SUCCESS
             res.path = [Float64Array(p) for p in unfiltered]
+            res.planner_type = planner_type
             self.pfs_server.set_succeeded(res)
             return
         else:

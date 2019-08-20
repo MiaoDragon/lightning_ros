@@ -17,4 +17,6 @@ Float64Array[] retrieved_path
 Float64Array[] repaired_path
 
 Status status
+PlannerType retrieved_planner_type
+PlannerType repaired_planner_type
 ---
