@@ -9,7 +9,7 @@
         <param name="framework_type" value="ompl" />
         <param name="env_name" value="s2d" />
         <param name="planner_name" value="rrtstar" />
-        <rosparam command='load' file='$(find lightning)/config/s2d_model_parameters' ns='model' subst_value=true>
+        <rosparam command='load' file='$(find lightning)/config/s2d_model_parameters.yaml' ns='model' subst_value='True'>
           <!-- ROS parameters for Neural Network -->
         </rosparam>
         <!-- <remap from="register_planning_scene" to="/register_planning_scene" />-->
@@ -26,17 +26,20 @@
             <param name="num_paths_to_collision_check" value="4" />
             <param name="dtw_distance" value="5.0" />
             <param name="path_library_dir" value="$(find lightning)/scripts/pathlib/paths" />
+            <param name='model_device' value='cpu' />
         </node>
 
         <!-- handles requests for PFS planning -->
         <node name="pfs_node" pkg="lightning" type="PFS_action_server.py" output="screen">
+          <param name='model_device' value='cpu' />
         </node>
 
         <!-- receives planning requests and routes them to RR and/or PFS -->
-        <node name="lightning" pkg="lightning" type="run_mpnet_lightning.py" output="screen">
+        <node name="lightning" pkg="lightning" type="run_lightning.py" output="screen">
             <param name="store_paths" value="true" />
             <param name="use_RR" value="true" />
             <param name="use_PFS" value="true" />
+            <param name='model_device' value='cpu' />
         </node>
     </group>
 </launch>

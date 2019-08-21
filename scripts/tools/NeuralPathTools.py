@@ -52,9 +52,10 @@ from lightning.msg import Float64Array, Float64Array2D, DrawPoints
 from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest, GetStateValidity, GetStateValidityRequest, GetStateValidityResponse
 from moveit_msgs.msg import JointConstraint, Constraints
-
+from std_msgs.msg import UInt8
 import utility
-
+from architecture.GEM_end2end_model import End2EndMPNet
+import torch
 # Names of Topics/Services to be advertised/used by these wrappers.
 # The name of the collision checking service.
 COLLISION_CHECK = "collision_check"
@@ -127,26 +128,27 @@ class PlanTrajectoryWrapper:
         self.model_path = rospy.get_param('model/model_path')
         self.model_name = rospy.get_param('model/model_name')
         #self.neural_planners = ['%s_neural_planner_node0/mpnet' % (node_type)]
-        self.neural_planners = [utility.create_and_load_model(self.model_path+self.model_name)]
-        rospy.loginfo('Initializing planner for MPNet...')
+        device = torch.device(rospy.get_param('~model_device'))
+        self.neural_planners = [utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)]
+        rospy.loginfo('%s Initializing planner for MPNet...' % (rospy.get_name()))
         ## TODO: might consider adding locks for multiple MPNets, but currently not needed
         self.model_update_subscriber = rospy.Subscriber(UPDATE_TOPIC, UInt8, self._update_model)
         self.model_lock = threading.Lock() # to ensure you don't update and predict at the same time
 
     def _update_model(self, msg):
-        rospy.loginfo('PlanTrajectoryWrapper: Updating model...')
+        rospy.loginfo('%s PlanTrajectoryWrapper: Updating model...' % (rospy.get_name()))
         self.model_lock.acquire()
         # load from file
         ## TODO: check if need to map the device to the desired one
         utility.load_net_state(self.neural_planners[0], self.model_path+self.model_name)
         self.model_lock.release()
-        rospy.loginfo('PlanTrajectoryWrapper: Model got updated.')
+        rospy.loginfo('%s PlanTrajectoryWrapper: Model got updated.' % (rospy.get_name()))
 
     def acquire_neural_planner(self):
         self.model_lock.acquire()
         return 0
 
-    def release_neural_planner(self):
+    def release_neural_planner(self, planner_num):
         self.model_lock.release()
 
     def acquire_planner(self):
@@ -216,7 +218,8 @@ class PlanTrajectoryWrapper:
               configurations at each point on the path.
         """
         planner_client = rospy.ServiceProxy(self.planners[planner_number], GetMotionPlan)
-        rospy.loginfo("Plan Trajectory Wrapper: got a plan_trajectory request for %s with start = %s and goal = %s" % (self.planners[planner_number], start_point, goal_point))
+        rospy.loginfo("%s Plan Trajectory Wrapper: got a plan_trajectory request for %s with start = %s and goal = %s"  \
+                % (rospy.get_name(), self.planners[planner_number], start_point, goal_point))
         # Put together the service request.
         req = GetMotionPlanRequest()
         req.motion_plan_request.workspace_parameters.header.stamp = rospy.get_rostime()
@@ -245,15 +248,18 @@ class PlanTrajectoryWrapper:
         try:
             response = planner_client(req)
         except rospy.ServiceException, e:
-            rospy.loginfo("Plan Trajectory Wrapper: service call failed: %s"%e)
+            rospy.loginfo("%s Plan Trajectory Wrapper: service call failed: %s"
+            % (rospy.get_name(), e))
             return None
 
         # Pull a list of joint positions out of the returned plan.
-        rospy.loginfo("Plan Trajectory Wrapper: %s returned" % (self.planners[planner_number]))
+        rospy.loginfo("%s Plan Trajectory Wrapper: %s returned" \
+        % (rospy.get_name(), self.planners[planner_number]))
         if response.motion_plan_response.error_code.val == response.motion_plan_response.error_code.SUCCESS:
             return [pt.positions for pt in response.motion_plan_response.trajectory.joint_trajectory.points]
         else:
-            rospy.loginfo("Plan Trajectory Wrapper: service call to %s was unsuccessful" % planner_client.resolved_name)
+            rospy.loginfo("%s Plan Trajectory Wrapper: service call to %s was unsuccessful"
+            % (rospy.get_name(), planner_client.resolved_name))
             return None
 
     def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
@@ -279,13 +285,17 @@ class PlanTrajectoryWrapper:
         """
         # TODO: add hybrid planning for Baxter environment
         """
-        # acquire neural model
-        self.model_lock.acquire()
-        rospy.loginfo('Plan Trajectory Wrapper: using neural network for planning...')
+        rospy.loginfo('%s Plan Trajectory Wrapper: using neural network for planning...' \
+            % (rospy.get_name()))
         step_sz = DEFAULT_STEP
         MAX_NEURAL_REPLAN = 11
+        IsInCollision = self.IsInCollision
         path = [torch.FloatTensor(start_point), torch.FloatTensor(goal_point)]
         mpNet = self.neural_planners[0]
+        def IsInCollision(state, obc):
+            return not stateValidate(state, group_name, constraints=None, print_depth=False)
+        fp = 0
+        time0 = time.time()
         for t in range(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
@@ -295,23 +305,25 @@ class PlanTrajectoryWrapper:
             elif (t > 3):
                 step_sz = 0.1
             if time_flag:
-                path, time_norm = neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
+                path, time_norm = plan_general.neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
                                     normalize_func, unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
             else:
-                path = neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
+                path = plan_general.neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
                                     normalize_func, unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
-            path = lvc(path, obc[i], IsInCollision, step_sz=step_sz)
-            if feasibility_check(path, obc[i], IsInCollision, step_sz=0.01):
+            path = plan_general.lvc(path, obc[i], IsInCollision, step_sz=step_sz)
+            if plan_general.feasibility_check(path, obc[i], IsInCollision, step_sz=0.01):
                 fp = 1
-                print('feasible, ok!')
+                rospy.loginfo('%s Nueral Planner: plan is feasible.' % (rospy.get_name()))
                 break
-    if fp:
-        # only for successful paths
-        time1 = time.time() - time0
-        time1 -= time_norm
-        time_path.append(time1)
-        print('test time: %f' % (time1))
-
+        if fp:
+            # only for successful paths
+            time1 = time.time() - time0
+            time1 -= time_norm
+            print('test time: %f' % (time1))
+            ## TODO: make sure path is indeed list
+            return path
+        else:
+            return None
 
 
 

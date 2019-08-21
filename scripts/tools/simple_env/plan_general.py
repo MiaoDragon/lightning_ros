@@ -38,7 +38,7 @@ def steerTo(start, end, obc, IsInCollision, step_sz=DEFAULT_STEP):
     # obtain the change for each segment
     delta_seg = delta / num_segs
     # initialize segment
-    if not isinstance(delta, np.ndarray):
+    if not isinstance(start, np.ndarray):
         # then is torch tensor
         seg = start.numpy()
     else:
@@ -212,7 +212,6 @@ def complete_replan_global(mpNet, path, true_path, true_path_length, obc, obs, o
     mpNet.observe(bi, 0, bt)
     demo_path = [torch.from_numpy(p).type(torch.FloatTensor) for p in demo_path]
     return demo_path, added_data
-
 
 def transformToTrain(path, path_length, obs, obs_i):
     dataset=[]

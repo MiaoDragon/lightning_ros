@@ -54,6 +54,7 @@ from lightning.msg import StopPlanning, Float64Array
 from lightning.msg import PlannerType
 from tools import NeuralPathTools
 from tools import NeuralOMPLPathTools
+import time
 # The name of this node.
 PFS_NODE_NAME = "pfs_node";
 # The topic to Publish which tells the actual planners to stop.
@@ -84,7 +85,8 @@ class PFSNode:
         self.pfs_server.start()
         self.stop_pfs_subscriber = rospy.Subscriber(STOP_PFS_NAME, StopPlanning, self._stop_pfs_planner)
         self.stop_pfs_planner_publisher = rospy.Publisher(STOP_PLANNER_NAME, StopPlanning, queue_size=10)
-
+        self._call_classic_planner_res = [None, None]
+        self._call_neural_planner_res = [None, None]
     def _get_stop_value(self):
         self.stop_lock.acquire()
         ret = self.stop
@@ -120,6 +122,7 @@ class PFSNode:
         """
         rospy.loginfo('PFS_action_server: Starting classic planning...')
         ret = None
+        classic_planner_time = None
         planner_number = self.plan_trajectory_wrapper.acquire_planner()
         if not self._need_to_stop():
             classic_planner_time = time.time()
@@ -146,6 +149,7 @@ class PFSNode:
         """
         rospy.loginfo('PFS_action_server: Starting neural planning...')
         ret = None
+        neural_planner_time = None
         planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
         if not self._need_to_stop():
             neural_planner_time = time.time()

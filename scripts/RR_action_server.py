@@ -62,7 +62,7 @@ from std_msgs.msg import UInt8
 import sys
 import pickle
 import time
-
+from architecture.GEM_end2end_model import End2EndMPNet
 # Name of this node.
 RR_NODE_NAME = "rr_node"
 # Name to use for stopping the repair planner. Published from this node.
@@ -113,7 +113,8 @@ class RRNode:
         self.draw_points = rospy.get_param("draw_points")
         if self.draw_points:
             self.draw_points_wrapper = DrawPointsWrapper()
-
+        self._call_classic_planner_res = [None, None]
+        self._call_neural_planner_res = [None, None]
     def _set_repaired_section(self, index, section):
         """
           After you have done the path planning to repair a section, store
@@ -143,6 +144,7 @@ class RRNode:
         """
         rospy.loginfo('RR_action_server: Starting classic planning...')
         ret = None
+        classic_planner_time = None
         planner_number = self.plan_trajectory_wrapper.acquire_planner()
         if not self._need_to_stop():
             classic_planner_time = time.time()
@@ -169,6 +171,7 @@ class RRNode:
         """
         rospy.loginfo('RR_action_server: Starting neural planning...')
         ret = None
+        neural_planner_time = None
         planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
         if not self._need_to_stop():
             neural_planner_time = time.time()
@@ -431,7 +434,7 @@ class RRNode:
                         #start_invalid and end_invalid must correspond to valid states when passed to the planner
                         start_invalid, end_invalid = invalid_sections[i]
                         rospy.loginfo("RR action server: Requesting path to replace from %d to %d" % (start_invalid, end_invalid))
-                        planner_type, repairedSection = self._call_planner(original_path[start_invalid], original_path[end_invalid])
+                        planner_type, repairedSection = self._call_planner(original_path[start_invalid], original_path[end_invalid], planning_time)
                         if planner_type == PlannerType.CLASSIC:
                             repaired_planner_type = PlannerType.CLASSIC
                         ## TODO: modify library path format to add planner type, so we can train model according to it

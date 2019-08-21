@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from Model.gem_utility import *
+from gem_utility import *
 import numpy as np
 import copy
 # Auxiliary functions useful for GEM's inner optimization.
@@ -172,6 +172,7 @@ class End2EndMPNet(nn.Module):
                     overwrite_grad(self.parameters, self.grads[:, new_t],
                                    self.grad_dims)
             self.opt.step()
+            print('optimizer stepping...')
         # after training, store into memory
 
         # when storing into memory, we use the correct task label

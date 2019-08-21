@@ -53,15 +53,19 @@ import actionlib
 import threading
 
 import time
-
-from lightning.msg import RRAction, RRGoal, PFSAction, PFSGoal, Float64Array, StopPlanning, Stats
+import os
+from lightning.msg import RRAction, RRGoal, PFSAction, PFSGoal, Float64Array, StopPlanning, Stats, PlannerType
 from lightning.srv import ManagePathLibrary, ManagePathLibraryRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanResponse
-from std_msgs.msg import Float32
-import tools.PathTools
-import tools.OMPLPathTools
+from std_msgs.msg import Float32, UInt8
 from trajectory_msgs.msg import JointTrajectoryPoint
+from tools import NeuralOMPLPathTools, NeuralPathTools
+from tools import utility
+from tools.simple_env import plan_general
+from architecture.GEM_end2end_model import End2EndMPNet
 
+import numpy as np
+import torch
 # Node names for RR and PFS plan retrieval.
 RR_NODE_NAME = "rr_node"
 PFS_NODE_NAME = "pfs_node"
@@ -74,19 +78,22 @@ LIGHTNING_SERVICE = "lightning_get_path"
 SET_PLANNING_SCENE_DIFF_NAME = "/get_planning_scene";
 # Service name for managing path library.
 MANAGE_LIBRARY = "manage_path_library"
+
+# Topic to publish to for updating the neural network
+UPDATE_TOPIC = 'model_update'
 class Lightning:
     def __init__(self):
         # depending on the argument framework_type, use different classes and settings
         framework_type = rospy.get_param('framework_type')
         if framework_type == 'ompl':
-            ShortcutPathWrapper = tools.OMPLPathTools.ShortcutPathWrapper
-            DrawPointsWrapper = tools.OMPLPathTools.DrawPointsWrapper
+            ShortcutPathWrapper = NeuralOMPLPathTools.ShortcutPathWrapper
+            DrawPointsWrapper = NeuralOMPLPathTools.DrawPointsWrapper
         elif framework_type == 'moveit':
             # Make sure that the moveit server is ready before starting up
             rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
             rospy.wait_for_service(SET_PLANNING_SCENE_DIFF_NAME); #make sure the environment server is ready before starting up
-            ShortcutPathWrapper = tools.OMPLPathTools.ShortcutPathWrapper
-            DrawPointsWrapper = tools.OMPLPathTools.DrawPointsWrapper
+            ShortcutPathWrapper = NeuralOMPLPathTools.ShortcutPathWrapper
+            DrawPointsWrapper = NeuralOMPLPathTools.DrawPointsWrapper
 
         # Initialize clients for planners.
         self.rr_client = actionlib.SimpleActionClient(RR_NODE_NAME, RRAction)
@@ -109,7 +116,6 @@ class Lightning:
         self.rr_returned, self.pfs_returned = False, False
         self.done_lock = threading.Lock()
         self.lightning_response_ready_event = threading.Event()
-
         #if draw_points is True, then display points in rviz
         self.draw_points = rospy.get_param("draw_points")
         if self.draw_points:
@@ -121,6 +127,46 @@ class Lightning:
           # parts of the lightning planner to run.
           self.stat_pub = rospy.Publisher("stats", Stats, queue_size=10)
 
+        #### neural network setup
+        # construct model from fed environment
+        self.model_path = rospy.get_param('model/model_path')
+        self.model_name = rospy.get_param('model/model_name')
+
+        # set device (CUDA or CPU)
+        device = torch.device(rospy.get_param('~model_device'))
+        self.model = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)
+        ## # TODO: move model to GPU
+        self.retrieved_and_final_path = None
+        # record current planning path
+        # format: [planner_type, path, planner_type, path]
+
+        self.torch_seed, self.np_seed, self.py_seed = 0, 0, 0
+
+        # construct publisher to notify server the model is trained
+        self._model_trained_publisher = rospy.Publisher(UPDATE_TOPIC, UInt8, queue_size=10)
+
+        # to make sure initially the planner and server have the same model,
+        # we save the model at the beginning if the model file does not exist
+        if not os.path.isfile(self.model_path+self.model_name):
+            rospy.loginfo('Lightning: Saving initial network parameters...')
+            utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
+        # notify to synchronize model weights
+        rospy.sleep(1)  # sleep so that subscriber can obtain message
+        rospy.loginfo('Lightning: Notify planner to update network...')
+        self._notify_update()
+
+    def _notify_update(self):
+        # do this for 2 seconds to make sure all models got updated
+        #start_time = time.time()
+        # send 4 signals
+        for i in range(4):
+            self._model_trained_publisher.publish(UInt8(0))
+            rospy.sleep(0.1)
+        #while True:
+        #    self._model_trained_publisher.publish(UInt8(0))
+        #    print(time.time()-start_time)
+        #    if time.time() - start_time > 2:
+        #        break
     # Called in a separate thread to stop the planning nodes in case of timeout.
     def _lightning_timeout(self, time):
         self.lightning_response_ready_event.wait(time)
@@ -134,6 +180,7 @@ class Lightning:
     # Main service routine advertised for the benefit of the user.
     def run(self, request):
         #make sure the request is valid
+        self.retrieved_and_final_path = None
         start_and_goal = self._is_valid_motion_plan_request(request)
         if start_and_goal is None:
             response = GetMotionPlanResponse()
@@ -183,10 +230,61 @@ class Lightning:
         self.lightning_response_ready_event.wait()
         if self.lightning_response.motion_plan_response.error_code.val != self.lightning_response.motion_plan_response.error_code.SUCCESS:
             rospy.loginfo("Lightning: did not find a path")
-        else:
-            rospy.loginfo("Lightning: Lightning is responding with a path")
+            # no need to do train MPNet
+            return self.lightning_response
 
+        rospy.loginfo("Lightning: Lightning is responding with a path")
+        """
+        depending on the path property, train MPNet or not.
+        If the path is planned by Classical planner before or now, train it with MPNet.
+        1. transform path data into pytorch version
+        2. train Continual MPNet with the new path
+        3. save the new model weights to file
+        4. notify planners to update the model
+        """
+        # transform path into pytorch version
+        self.train_model()
         return self.lightning_response
+
+    def train_model(self):
+        """
+        depending on the path property, train MPNet or not.
+        If the path is planned by Classical planner before or now, train it with MPNet.
+        1. transform path data into pytorch version
+        2. train Continual MPNet with the new path
+        3. save the new model weights to file
+        4. notify planners to update the model
+        """
+        retrieved_planner_type, retrieved_path, final_planner_type, final_path = self.retrieved_and_final_path
+        # depending on retrieved_planner_type and final_planner, train the network
+        if (retrieved_planner_type is None) or (retrieved_planner_type == PlannerType.NEURAL and final_planner_type == PlannerType.NEURAL):
+           return
+        rospy.loginfo('Lightning: Training Neural Network...')
+        # receive obstacle information
+        obs = rospy.wait_for_message('obstacles/obs', Float64Array)
+        obs = obs.values
+        obs = torch.FloatTensor(obs)
+
+        # # TODO: training code needs to be written (data format change, then call observe)
+        ## TODO: debug training code, to see if the network is actually training
+        dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, 0)
+        added_data = list(zip(dataset,targets,env_indices))
+        bi = np.concatenate( (obs.numpy().reshape(1,-1).repeat(len(dataset),axis=0), dataset), axis=1).astype(np.float32)
+        bi = torch.FloatTensor(bi)
+        bt = torch.FloatTensor(targets)
+        # normalize first
+        ## TODO: here write normalize
+        #bi, bt = normalize(bi), normalize(bt)
+        self.model.zero_grad()
+        bi=plan_general.to_var(bi)
+        bt=plan_general.to_var(bt)
+        self.model.observe(bi, 0, bt)
+        # write trained model to file
+        utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
+        # notify planners to update the model
+        msg = UInt8(0)
+        rospy.loginfo('Lightning: Notify planner to update network...')
+        self._notify_update()
 
     def _print_error(self, msg):
         rospy.logerr("***ERROR*** %s ***ERROR***" % (msg))
@@ -244,6 +342,9 @@ class Lightning:
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
                 self.lightning_response_ready_event.set()
 
+                # record the planned path and planner
+                self.retrieved_and_final_path = [result.retrieved_planner_type, None, result.repaired_planner_type, rr_path]
+
                 self.done_lock.release()
 
                 #display new path in rviz
@@ -292,6 +393,8 @@ class Lightning:
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
                 self.lightning_response_ready_event.set()
 
+                # record the planned path and planner
+                self.retrieved_and_final_path = [None, None, result.planner_type, pfsPath]
                 self.done_lock.release()
 
                 #display new path in rviz

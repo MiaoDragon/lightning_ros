@@ -3,6 +3,7 @@ from torch.autograd import Variable
 import copy
 import rospy
 import os
+import importlib
 
 def to_var(x, volatile=False):
     if torch.cuda.is_available():
@@ -33,7 +34,9 @@ def load_seed(fname):
     checkpoint = torch.load(fname)
     return checkpoint['torch_seed'], checkpoint['np_seed'], checkpoint['py_seed']
 
-def create_model():
+def create_model(ModelConstr):
+    mlp_arch_path = rospy.get_param('model/mlp_arch_path')
+    cae_arch_path = rospy.get_param('model/cae_arch_path')
     total_input_size = rospy.get_param('model/total_input_size')
     AE_input_size = rospy.get_param('model/AE_input_size')
     mlp_input_size = rospy.get_param('model/mlp_input_size')
@@ -42,7 +45,11 @@ def create_model():
     n_memories = rospy.get_param('model/n_memories')
     memory_strength = rospy.get_param('model/memory_strength')
     grad_step = rospy.get_param('model/grad_step')
-    model = End2EndMPNet(total_input_size, AE_input_size, mlp_input_size, \
+
+    mlp = importlib.import_module(mlp_arch_path)
+    CAE = importlib.import_module(cae_arch_path)
+    MLP = mlp.MLP
+    model = ModelConstr(total_input_size, AE_input_size, mlp_input_size, \
             output_size, 'deep', n_tasks, n_memories, memory_strength, grad_step, \
             CAE, MLP)
     return model
@@ -59,12 +66,14 @@ def create_optimizer(model):
     elif opt_type == 'ASGD':
         model.set_opt(torch.optim.ASGD, lr=learning_rate)
 
-def create_and_load_model(fname):
-    rospy.info('Creating and loading model...')
-    model = create_model()
+def create_and_load_model(ModelConstr, fname, device):
+    rospy.loginfo('Creating and loading model...')
+    model = create_model(ModelConstr)
     if os.path.isfile(fname):
         # previous trained model exists, load model
         load_net_state(model, fname)
+    # make sure the new loaded weights are transformed as well
+    model.to(device=device)
     # create optimizer
     # create this later because I'm not sure if loading previous network weights
     # will overwrite the optimizer parameters

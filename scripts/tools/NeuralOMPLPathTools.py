@@ -52,14 +52,16 @@ from lightning.msg import Float64Array, Float64Array2D, DrawPoints
 from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest
 from moveit_msgs.msg import JointConstraint, Constraints
-from std_msgs.msg import Float64
-import neuralPathTools
-
+from std_msgs.msg import Float64, UInt8
+import NeuralPathTools
+from architecture.GEM_end2end_model import End2EndMPNet
 from ompl import base as ob
 from ompl import geometric as og
 from simple_env import plan_general
 from simple_env import plan_c2d, plan_s2d, plan_r2d, plan_r3d
 from simple_env import data_loader_2d, data_loader_r2d, data_loader_r3d
+from simple_env import utility_s2d, utility_c2d, utility_r2d, utility_r3d
+import torch
 import argparse
 import pickle
 import sys
@@ -76,6 +78,7 @@ SHORTCUT_PATH_NAME = "shortcut_path"
 DISPLAY_POINTS = "draw_points"
 # Name of the planner_stoppable services advertised from various lightning nodes.
 PLANNER_NAME = "plan_kinematic_path"
+DEFAULT_STEP = 2.
 def allocatePlanner(si, plannerType):
     if plannerType.lower() == "bfmtstar":
         return og.BFMT(si)
@@ -105,7 +108,7 @@ def getPathLengthObjective(si, length):
     obj.setCostThreshold(ob.Cost(length))
     return obj
 
-class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
+class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
     """
         This class uses functionalities of PlanTrajectoryWrapper, but overrides the
         planning functions to directly use OMPL planning library.
@@ -131,13 +134,16 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
               generally "pfs" or "rr".
             num_planners (int): The number of planner nodes that are being used.
         """
-        neuralPathTools.PlanTrajectoryWrapper.__init__(self, node_type, num_planners)
+        NeuralPathTools.PlanTrajectoryWrapper.__init__(self, node_type, num_planners)
         ## add OMPL setting for different environments
         self.env_name = rospy.get_param('env_name')
         self.planner_name = rospy.get_param('planner_name')
         if self.env_name == 's2d':
             #data_loader = data_loader_2d
             IsInCollision = plan_s2d.IsInCollision
+            normalize = utility_s2d.normalize
+            unnormalize = utility_s2d.unnormalize
+            world_size = [20., 20.]
             # create an SE2 state space
             space = ob.RealVectorStateSpace(2)
             bounds = ob.RealVectorBounds(2)
@@ -147,6 +153,9 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
         elif self.env_name == 'c2d':
             #data_loader = data_loader_2d
             IsInCollision = plan_c2d.IsInCollision
+            normalize = utility_c2d.normalize
+            unnormalize = utility_c2d.unnormalize
+            world_size = [20., 20.]
             # create an SE2 state space
             space = ob.RealVectorStateSpace(2)
             bounds = ob.RealVectorBounds(2)
@@ -156,6 +165,9 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
         elif self.env_name == 'r2d':
             #data_loader = data_loader_r2d
             IsInCollision = plan_r2d.IsInCollision
+            normalize = utility_r2d.normalize
+            unnormalize = utility_r2d.unnormalize
+            world_size = [20., 20., np.pi]
             # create an SE2 state space
             space = ob.SE2StateSpace()
             bounds = ob.RealVectorBounds(2)
@@ -165,6 +177,9 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
         elif self.env_name == 'r3d':
             #data_loader = data_loader_r3d
             IsInCollision = plan_r3d.IsInCollision
+            normalize = utility_r3d.normalize
+            unnormalize = utility_r3d.unnormalize
+            world_size = [20., 20., 20.]
             # create an SE2 state space
             space = ob.RealVectorStateSpace(3)
             bounds = ob.RealVectorBounds(3)
@@ -173,6 +188,11 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
             space.setBounds(bounds)
         self.IsInCollision = IsInCollision
         self.space = space
+        self.normalize = normalize
+        self.unnormalize = unnormalize
+        self.world_size = world_size
+        self.normalize_func=lambda x: normalize(x, self.world_size)
+        self.unnormalize_func=lambda x: unnormalize(x, self.world_size)
         # for thread-safety, should not modify shared vars
         #self.si = ob.SpaceInformation(space)
 
@@ -182,22 +202,22 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
             collision checking
         """
         # obtain obstacle information through rostopic
-        rospy.loginfo("Plan Trajectory Wrapper: waiting for obstacle message...")
+        rospy.loginfo("%s Plan Trajectory Wrapper: waiting for obstacle message..." % (rospy.get_name()))
         obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
-        rospy.loginfo("Plan Trajectory Wrapper: obstacle message received.")
+        rospy.loginfo("%s Plan Trajectory Wrapper: obstacle message received." % (rospy.get_name()))
         # obtain path length through rostopic
-        rospy.loginfo("Plan Trajectory Wrapper: waiting for planning path length message...")
+        rospy.loginfo("%s Plan Trajectory Wrapper: waiting for planning path length message..." % (rospy.get_name()))
         path_length = rospy.wait_for_message('planning/path_length_threshold', Float64)
         path_length = path_length.data
-        rospy.loginfo("Plan Trajectory Wrapper: planning path length received.")
+        rospy.loginfo("%s Plan Trajectory Wrapper: planning path length received." % (rospy.get_name()))
 
         # reshape
         # plan
         IsInCollision = self.IsInCollision
-        rospy.loginfo("Plan Trajectory Wrapper: start planning...")
+        rospy.loginfo("%s Plan Trajectory Wrapper: start planning..." % (rospy.get_name()))
         # create a simple setup object
         start = ob.State(self.space)
         # we can pick a random start state...
@@ -221,7 +241,7 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
         ss.setup()
         solved = ss.solve(planning_time)
         if solved:
-            rospy.loginfo("Plan Trajectory Wrapper: OMPL Planner solved successfully.")
+            rospy.loginfo("%s Plan Trajectory Wrapper: OMPL Planner solved successfully." % (rospy.get_name()))
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
             solutions = np.zeros((len(ompl_path),2))
@@ -255,12 +275,24 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
         """
         # TODO: add hybrid planning for Baxter environment
         """
-        rospy.loginfo('Plan Trajectory Wrapper: using neural network for planning...')
+        # obtain obstacle information through rostopic
+        rospy.loginfo("%s Plan Trajectory Wrapper: waiting for obstacle message..." % (rospy.get_name()))
+        obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
+        obc = torch.FloatTensor([obc_i.values for obc_i in obc.points])
+        obs = rospy.wait_for_message('obstacles/obs', Float64Array)
+        obs = obs.values
+        obs = torch.FloatTensor(obs)
+        rospy.loginfo("%s Plan Trajectory Wrapper: obstacle message received." % (rospy.get_name()))
+
+        rospy.loginfo('%s Plan Trajectory Wrapper: using neural network for planning...' % (rospy.get_name()))
         step_sz = DEFAULT_STEP
         MAX_NEURAL_REPLAN = 11
         IsInCollision = self.IsInCollision
         path = [torch.FloatTensor(start_point), torch.FloatTensor(goal_point)]
         mpNet = self.neural_planners[0]
+        time_flag = False
+        fp = 0
+        time0 = time.time()
         for t in range(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
@@ -270,28 +302,28 @@ class PlanTrajectoryWrapper(neuralPathTools.PlanTrajectoryWrapper):
             elif (t > 3):
                 step_sz = 0.1
             if time_flag:
-                path, time_norm = plan_general.neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
-                                    normalize_func, unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
+                path, time_norm = plan_general.neural_replan(mpNet, path, obc, obs, IsInCollision, \
+                                    self.normalize_func, self.unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
             else:
-                path = plan_general.neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
-                                    normalize_func, unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
-            path = plan_general.lvc(path, obc[i], IsInCollision, step_sz=step_sz)
-            if plan_general.feasibility_check(path, obc[i], IsInCollision, step_sz=0.01):
+                path = plan_general.neural_replan(mpNet, path, obc, obs, IsInCollision, \
+                                    self.normalize_func, self.unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
+                time_norm = 0
+            path = plan_general.lvc(path, obc, IsInCollision, step_sz=step_sz)
+            if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
-                rospy.loginfo('Nueral Planner: plan is feasible.')
+                rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
                 break
-    if fp:
-        # only for successful paths
-        time1 = time.time() - time0
-        time1 -= time_norm
-        time_path.append(time1)
-        print('test time: %f' % (time1))
-        ## TODO: make sure path is indeed list
-        return path
-    else:
-        return None
+        if fp:
+            # only for successful paths
+            time1 = time.time() - time0
+            time1 -= time_norm
+            print('test time: %f' % (time1))
+            ## TODO: make sure path is indeed list
+            return path
+        else:
+            return None
 
-class ShortcutPathWrapper(neuralPathTools.ShortcutPathWrapper):
+class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
     """
       This is a very thin wrapper over the path shortcutting service.
     """
@@ -345,7 +377,7 @@ class ShortcutPathWrapper(neuralPathTools.ShortcutPathWrapper):
         path = np.array(path).tolist()
         return path
 
-class InvalidSectionWrapper(neuralPathTools.InvalidSectionWrapper):
+class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
     """
         This uses our user-defined collision checker
     """
@@ -426,7 +458,7 @@ class InvalidSectionWrapper(neuralPathTools.InvalidSectionWrapper):
             inv_sec_paths.append(inv_sec_path)
         return inv_sec_paths
 
-class DrawPointsWrapper(neuralPathTools.DrawPointsWrapper):
+class DrawPointsWrapper(NeuralPathTools.DrawPointsWrapper):
     pass
 
 if __name__ == "__main__":

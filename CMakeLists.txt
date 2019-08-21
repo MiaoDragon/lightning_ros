@@ -64,6 +64,7 @@ add_message_files(
   IntArray2D.msg
   IntArray.msg
   StopPlanning.msg
+  PlannerType.msg
 )
 
 ## Generate services in the 'srv' folder
