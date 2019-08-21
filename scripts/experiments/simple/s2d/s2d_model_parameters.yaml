@@ -1,6 +1,6 @@
 mlp_arch_path: 'architecture.model'
 cae_arch_path: 'architecture.AE.CAE'
-model_path: '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/scripts/model/s2d/'
+model_path: '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/results/simple/s2d'
 model_name: 'model_s2d.pkl'
 total_input_size: 2804
 AE_input_size: 2800

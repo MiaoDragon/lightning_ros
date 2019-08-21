@@ -55,6 +55,7 @@ from lightning.msg import PlannerType
 from tools import NeuralPathTools
 from tools import NeuralOMPLPathTools
 import time
+import numpy as np
 # The name of this node.
 PFS_NODE_NAME = "pfs_node";
 # The topic to Publish which tells the actual planners to stop.
@@ -149,7 +150,7 @@ class PFSNode:
         """
         rospy.loginfo('PFS_action_server: Starting neural planning...')
         ret = None
-        neural_planner_time = None
+        neural_planner_time = np.inf
         planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
         if not self._need_to_stop():
             neural_planner_time = time.time()

@@ -12,9 +12,12 @@ uint8 ACTION_DELETE_LIBRARY=3
 
 #path that was retrieved from the library: specify this if it needs to be compared to path_to_store to know if path_to_store should be stored in the library
 trajectory_msgs/JointTrajectoryPoint[] retrieved_path
+#no need to store retrieved planner again
 
 #path to store in the library if it is different enough from retrieved_path
 trajectory_msgs/JointTrajectoryPoint[] path_to_store
+#store planner type to determine if going to train neural network
+uint8 planner_type
 
 #specify this if a path is to be deleted
 int32 delete_id

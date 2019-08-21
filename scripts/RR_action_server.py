@@ -63,6 +63,7 @@ import sys
 import pickle
 import time
 from architecture.GEM_end2end_model import End2EndMPNet
+import numpy as np
 # Name of this node.
 RR_NODE_NAME = "rr_node"
 # Name to use for stopping the repair planner. Published from this node.
@@ -144,7 +145,7 @@ class RRNode:
         """
         rospy.loginfo('RR_action_server: Starting classic planning...')
         ret = None
-        classic_planner_time = None
+        classic_planner_time = np.inf
         planner_number = self.plan_trajectory_wrapper.acquire_planner()
         if not self._need_to_stop():
             classic_planner_time = time.time()
@@ -171,7 +172,7 @@ class RRNode:
         """
         rospy.loginfo('RR_action_server: Starting neural planning...')
         ret = None
-        neural_planner_time = None
+        neural_planner_time = np.inf
         planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
         if not self._need_to_stop():
             neural_planner_time = time.time()
@@ -323,7 +324,7 @@ class RRNode:
         while not self._need_to_stop() and repair_state != STATE_FINISHED:
             if repair_state == STATE_RETRIEVE:
                 start_retrieve = time.time()
-                projected, retrieved, invalid = self.path_library.retrieve_path(s, g, self.num_paths_checked, self.robot_name, self.current_group_name, self.current_joint_names)
+                projected, retrieved, invalid, retrieve_planner_type = self.path_library.retrieve_path(s, g, self.num_paths_checked, self.robot_name, self.current_group_name, self.current_joint_names)
                 self.stats_msg.retrieve_time.append(time.time() - start_retrieve)
                 if len(projected) == 0:
                     rospy.loginfo("RR action server: got an empty path for retrieve state")
@@ -348,7 +349,7 @@ class RRNode:
                 res.status.status = res.status.SUCCESS
                 res.retrieved_path = [Float64Array(p) for p in retrieved]
                 res.repaired_path = [Float64Array(p) for p in repaired]
-                res.retrieved_planner_type = PlannerType.CLASSIC#####
+                res.retrieved_planner_type = retrieve_planner_type
                 res.repaired_planner_type = repaired_planner_type
                 rospy.loginfo("RR action server: returning a path")
                 repair_state = STATE_FINISHED
@@ -393,10 +394,10 @@ class RRNode:
         if len(invalid_sections) > 0:
             if invalid_sections[0][0] == -1:
                 rospy.loginfo("RR action server: Start is not a valid state...nothing can be done")
-                return None
+                return None, None
             if invalid_sections[-1][1] == len(original_path):
                 rospy.loginfo("RR action server: Goal is not a valid state...nothing can be done")
-                return None
+                return None, None
 
             if use_parallel_repairing:
                 #multi-threaded repairing
@@ -414,7 +415,7 @@ class RRNode:
                 for item in self.repaired_sections:
                     if item is None:
                         rospy.loginfo("RR action server: RR node was stopped during repair or repair failed")
-                        return None
+                        return None, None
                 #replace invalid sections with replanned sections
                 new_path = original_path[0:invalid_sections[0][0]]
                 for i in xrange(len(invalid_sections)):
@@ -440,14 +441,14 @@ class RRNode:
                         ## TODO: modify library path format to add planner type, so we can train model according to it
                         if repairedSection is None:
                             rospy.loginfo("RR action server: RR section repair was stopped or failed")
-                            return None
+                            return None, None
                         rospy.loginfo("RR action server: Planner returned a trajectory of %d points for %d to %d" % (len(repairedSection), start_invalid, end_invalid))
                         new_path += repairedSection
                         if i+1 < len(invalid_sections):
                             new_path += original_path[end_invalid+1:invalid_sections[i+1][0]]
                     else:
                         rospy.loginfo("RR action server: RR was stopped while it was repairing the retrieved path")
-                        return None
+                        return None, None
                 new_path += original_path[invalid_sections[-1][1]+1:]
             rospy.loginfo("RR action server: Trajectory after replan has %d points" % len(new_path))
         else:
@@ -477,12 +478,13 @@ class RRNode:
             rospy.loginfo("RR action server: got a path to store in path library")
             if len(request.path_to_store) > 0:
                 new_path = [p.positions for p in request.path_to_store]
+                new_path_planner_type = request.planner_type
 
                 if len(request.retrieved_path) == 0:
                     #PFS won so just store the path
-                    store_path_result = self.path_library.store_path(new_path, request.robot_name, request.joint_names)
+                    store_path_result = self.path_library.store_path(new_path, new_path_planner_type, request.robot_name, request.joint_names)
                 else:
-                    store_path_result = self.path_library.store_path(new_path, request.robot_name, request.joint_names, [p.positions for p in request.retrieved_path])
+                    store_path_result = self.path_library.store_path(new_path, new_path_planner_type, request.robot_name, request.joint_names, [p.positions for p in request.retrieved_path])
                 response.result = response.SUCCESS
                 response.path_stored, response.num_library_paths = store_path_result
             else:

@@ -136,7 +136,7 @@ class Lightning:
         device = torch.device(rospy.get_param('~model_device'))
         self.model = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)
         ## # TODO: move model to GPU
-        self.retrieved_and_final_path = None
+        self.retrieved_and_final_path = [None, None, None, None]
         # record current planning path
         # format: [planner_type, path, planner_type, path]
 
@@ -180,7 +180,7 @@ class Lightning:
     # Main service routine advertised for the benefit of the user.
     def run(self, request):
         #make sure the request is valid
-        self.retrieved_and_final_path = None
+        self.retrieved_and_final_path = [None, None, None, None]
         start_and_goal = self._is_valid_motion_plan_request(request)
         if start_and_goal is None:
             response = GetMotionPlanResponse()
@@ -332,6 +332,7 @@ class Lightning:
                 self._send_stop_pfs_planning()
 
                 rr_path = [p.values for p in result.repaired_path]
+                retrieved_path = [p.values for p in result.retrieved_path]
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)
                 if self.publish_stats:
@@ -340,11 +341,11 @@ class Lightning:
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
                 # set planning time to be the total time up to now
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
-                self.lightning_response_ready_event.set()
-
                 # record the planned path and planner
-                self.retrieved_and_final_path = [result.retrieved_planner_type, None, result.repaired_planner_type, rr_path]
+                self.retrieved_and_final_path = [result.retrieved_planner_type.planner_type, None, \
+                                                 result.repaired_planner_type.planner_type, rr_path]
 
+                self.lightning_response_ready_event.set()
                 self.done_lock.release()
 
                 #display new path in rviz
@@ -352,7 +353,8 @@ class Lightning:
                     self.draw_points_wrapper.draw_points(rr_path, self.current_group_name, "final", DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREEN, 0.1)
 
                 if self.store_paths:
-                    store_response = self._store_path(rr_path, rr_path)
+                    #store_response = self._store_path(rr_path, rr_path) # this original version seems to be wrong because retrieved is the same as repaired
+                    store_response = self._store_path(rr_path, retrieved_path, result.repaired_planner_type.planner_type)
                     self._special_print("Lightning: Got a path from RR, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from RR")
@@ -391,10 +393,11 @@ class Lightning:
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
                 # set planning time to be the total time up to now
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
-                self.lightning_response_ready_event.set()
 
                 # record the planned path and planner
-                self.retrieved_and_final_path = [None, None, result.planner_type, pfsPath]
+                self.retrieved_and_final_path = [None, None, result.planner_type.planner_type, pfsPath]
+
+                self.lightning_response_ready_event.set()
                 self.done_lock.release()
 
                 #display new path in rviz
@@ -402,7 +405,7 @@ class Lightning:
                     self.draw_points_wrapper.draw_points(pfsPath, self.current_group_name, "final", DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREEN, 0.1)
 
                 if self.store_paths:
-                    store_response = self._store_path(pfsPath, [])
+                    store_response = self._store_path(pfsPath, [], result.planner_type.planner_type)
                     self._special_print("Lightning: Got a path from PFS, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from PFS")
@@ -432,11 +435,12 @@ class Lightning:
         return response
 
     # Calls PathTools library to store most recent path.
-    def _store_path(self, final_path, retrieved_path):
+    def _store_path(self, final_path, retrieved_path, planner_type):
         store_request = ManagePathLibraryRequest()
         store_request.joint_names = self.current_joint_names
         store_request.robot_name = self.robot_name
         store_request.action = store_request.ACTION_STORE
+        store_request.planner_type = planner_type
         # convert into apporpriate request.
         for point in final_path:
             jtp = JointTrajectoryPoint()
@@ -446,6 +450,8 @@ class Lightning:
             jtp = JointTrajectoryPoint()
             jtp.positions = point
             store_request.retrieved_path.append(jtp)
+        # wait for storing service
+        rospy.wait_for_service(MANAGE_LIBRARY);
         store_response = self.manage_library_client(store_request)
         return (store_response.path_stored, store_response.num_library_paths)
 

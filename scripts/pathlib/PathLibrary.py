@@ -248,15 +248,15 @@ class PathLibrary:
         new_paths = []
         for f in os.listdir(self._get_full_lib_name()):
             if f.find(ROOT_NAME) == 0:
-                for path_id, path in self._get_paths(f):
+                for path_id, path, planner_type in self._get_paths(f):
                     if path_id == pid:
                         current = f
                         break
             if current is not None:
                 rospy.loginfo("Path library: deleting path in %s" % (current))
-                for path_id, path in self._get_paths(current):
+                for path_id, path, planner_type in self._get_paths(current):
                     if path_id != pid:
-                        new_paths.append((path_id, path))
+                        new_paths.append((path_id, path, planner_type))
                 self._make_paths_file(current, new_paths)
                 sg_node_name = self._get_sg_leaf_by_path_name(current).name
                 sgs = self._get_sgs(sg_node_name)
@@ -272,14 +272,14 @@ class PathLibrary:
         return False
 
     #to force store a path, set prev_path to None
-    def store_path(self, new_path, robot_name, joint_names, prev_path=None):
+    def store_path(self, new_path, new_path_planner, robot_name, joint_names, prev_path=None):
         if not self._load_library(robot_name, joint_names):
             self._create_and_load_new_library(robot_name, joint_names)
         new_path = self._normalize_path(new_path);
         rospy.loginfo("Path Library: got a path of %i points to store" % (len(new_path)))
         if prev_path is None or len(prev_path) == 0 or self._calc_dtw_distance(prev_path, new_path) > self.dtw_dist:
             leaf_node = self._get_path_leaf_by_sg(new_path[0], new_path[-1]);
-            self._add_path(leaf_node.name, new_path);
+            self._add_path(leaf_node.name, new_path, new_path_planner);
             rospy.loginfo("Path Library: done storing path with id %i", self.next_path_id-1)
             return (True, self._read_library_size())
         else:
@@ -289,14 +289,14 @@ class PathLibrary:
     def retrieve_path(self, s, g, n, robot_name, group_name, joint_names):
         if not self._load_library(robot_name, joint_names):
             rospy.loginfo("Path library: No paths corresponding to robot %s with joints %s" % (robot_name, joint_names))
-            return ([], [], [])
+            return ([], [], [], [])
         s, g = list(s), list(g)
         leaf_node = self._get_path_leaf_by_sg(s, g)
         closest_n = self._find_closest_n_in_all(s, g, leaf_node, n)
         if len(closest_n) == 0:
             rospy.loginfo("Path library: No paths corresponding to %s" % (leaf_node.name));
-            return ([], [], []);
-        pids, path_names, paths = zip(*closest_n)
+            return ([], [], [], []);
+        pids, path_names, paths, planner_types = zip(*closest_n)
         projections = [self._path_projection(path, s, g) for path in paths]
         rospy.loginfo("Path library: start %s, goal %s" % (str(s), str(g)))
         start_time = time.time()
@@ -310,8 +310,10 @@ class PathLibrary:
                 best_path = (v, index);
         best_projection = projections[best_path[1]]
         path_retrieved = paths[best_path[1]]
-        rospy.loginfo("Path library: retrieved path has pathid = %i, length = %i" % (pids[best_path[1]], len(paths[best_path[1]])))
-        return (best_projection, path_retrieved, all_invalid_sections[best_path[1]])
+        best_planner_type = planner_types[best_path[1]]
+        rospy.loginfo("Path library: retrieved path has pathid = %i, length = %i, planner type = %i" \
+            % (pids[best_path[1]], len(paths[best_path[1]]), best_planner_type))
+        return (best_projection, path_retrieved, all_invalid_sections[best_path[1]], best_planner_type)
 
     def _path_projection(self, path, s, g):
         projection = []
@@ -381,7 +383,7 @@ class PathLibrary:
                         nodes.append((current_count, current_node.right));
         rospy.loginfo("Path library: Number of nodes checked: %i" % counter);
         rospy.loginfo("Path library: distances are %s" % ([(path_id, path_name, self._proj_dist(target_sg, sg)) for path_id, path_name, sg in best_sgs]))
-        return sorted(self._get_paths_of_sgs(best_sgs), key=(lambda (pid, path_name, p): self._total_dist(target_start, target_goal, p)));
+        return sorted(self._get_paths_of_sgs(best_sgs), key=(lambda (pid, path_name, p, planner_type): self._total_dist(target_start, target_goal, p)));
 
     def _can_prune(self, counts, node_name, target_node_name, max_dist):
         short_dirs, long_dirs = sorted([self._get_path_directions(name) for name in [node_name, target_node_name]], key=(lambda x: len(x)))
@@ -432,25 +434,28 @@ class PathLibrary:
 
     #add each path in all_paths to the correct node; used for reorganizing nodes
     def _store_multiple_paths(self, all_paths):
-        all_paths = [(pid, self._normalize_path(p)) for pid, p in all_paths];
+        all_paths = [(pid, self._normalize_path(p), planner_type) for pid, p, planner_type in all_paths];
         for i in xrange((len(all_paths)/self.node_size)+1):
             path_dict = dict(); #mapping from node name to list of paths to store at that node
+            planner_type_dict = dict();
             for path_with_id in all_paths[self.node_size*i:self.node_size*(i+1)]:
-                pid, path = path_with_id
+                pid, path, planner_type = path_with_id
                 leaf_name = self._get_path_leaf_by_sg(path[0], path[-1]).name;
                 if not path_dict.has_key(leaf_name):
                     path_dict[leaf_name] = [];
+                    planner_type_dict[leaf_name] = [];
                 path_dict[leaf_name].append(path);
+                planner_type_dict[leaf_name].append(planner_type)
             for key in path_dict.keys():
-                self._add_paths(key, path_dict[key]);
+                self._add_paths(key, path_dict[key], planner_type_dict[key]);
 
     def _get_old_paths(self, filename):
         f = open(filename, 'r');
         num_paths = int(f.next().strip());
         paths = [];
         for line in f:
-            pid_string, path_string = line.strip().split(" ")
-            paths.append((int(pid_string), self._string_to_path(path_string)));
+            pid_string, path_string, planner_type = line.strip().split(" ")
+            paths.append((int(pid_string), self._string_to_path(path_string), int(planner_type)));
         f.close();
         return paths;
 
@@ -477,7 +482,7 @@ class PathLibrary:
         max_range = (None, float('-inf')); #tuple of (tuple indicating split index, range on that index)
         for state in [START, GOAL]:
             for index in xrange(self.current_num_dims):
-                sort_key = lambda (pid, p): p[state][index];
+                sort_key = lambda (pid, p, planner_type): p[state][index];
                 temp_range = self._angle_between(sort_key(max(paths, key=sort_key)), sort_key(min(paths, key=sort_key)));
                 if temp_range > max_range[1]:
                     max_range = ((state, index), temp_range);
@@ -569,33 +574,35 @@ class PathLibrary:
         num_paths = int(f.next().strip())
         paths = []
         for line in f:
-            pid_string, path_string = line.strip().split(" ")
-            paths.append((int(pid_string), self._string_to_path(path_string)))
+            pid_string, path_string, planner_type = line.strip().split(" ")
+            paths.append((int(pid_string), self._string_to_path(path_string), int(planner_type)))
         f.close()
         return paths
 
     def _get_paths(self, filename):
         return self._read_paths_from_file(filename);
 
-    def _write_paths_to_file(self, filename, path_list):
+    def _write_paths_to_file(self, filename, path_list, planner_types):
         f = open(self._get_full_filename(filename), 'a');
         paths_with_ids = []
-        for p in path_list:
-            f.write("%i %s\n" % (self.next_path_id, self._path_to_string(p)));
-            paths_with_ids.append((self.next_path_id, p))
+        for i in range(len(path_list)):
+            p = path_list[i]
+            planner_type = planner_types[i]
+            f.write("%i %s %i\n" % (self.next_path_id, self._path_to_string(p), planner_type));
+            paths_with_ids.append((self.next_path_id, p, planner_type))
             self.next_path_id += 1
         f.close();
         return paths_with_ids
 
-    def _write_path_to_file(self, filename, path):
-        return self._write_paths_to_file(filename, [path])[0];
+    def _write_path_to_file(self, filename, path, planner_type):
+        return self._write_paths_to_file(filename, [path], [planner_type])[0];
 
-    def _add_paths(self, path_node_name, path_list):
+    def _add_paths(self, path_node_name, path_list, planner_types):
         num_paths_before_add = self._read_num_paths_from_file(path_node_name)
         sg_node_name = self._get_sg_leaf_by_path_name(path_node_name).name
         num_sgs_before_add = self._read_num_sgs_from_file(sg_node_name)
-        paths_with_ids = self._write_paths_to_file(path_node_name, path_list)
-        new_sgs = [(pid, self._get_sg_from_path(p)) for pid, p in paths_with_ids]
+        paths_with_ids = self._write_paths_to_file(path_node_name, path_list, planner_types)
+        new_sgs = [(pid, self._get_sg_from_path(p)) for pid, p, planner_type in paths_with_ids]
         if path_node_name not in self.sg_cache.keys():
             self._load_sg_cache(path_node_name)
         if not self.sg_cache.has_key(path_node_name):
@@ -616,14 +623,14 @@ class PathLibrary:
             else: #need to increment sg count here since path node split didn't do the update
                 self._change_sg_count_in_file(sg_node_name, len(new_sgs))
 
-    def _add_path(self, path_node_name, path):
-        self._add_paths(path_node_name, [path])
+    def _add_path(self, path_node_name, path, planner_type):
+        self._add_paths(path_node_name, [path], [planner_type])
 
     def _make_paths_file(self, filename, paths):
         f = open(self._get_full_filename(filename), 'w')
         f.write("%s\n" % (string.zfill(str(len(paths)), len(str(self.node_size)))))
-        for pid, path in paths:
-            f.write("%i %s\n" % (pid, self._path_to_string(path)))
+        for pid, path, planner_type in paths:
+            f.write("%i %s %i\n" % (pid, self._path_to_string(path), planner_type))
         f.close()
 
     def _path_to_string(self, path):
@@ -741,9 +748,9 @@ class PathLibrary:
             paths = self._get_paths(path_name)
             for pid_from_sg in sg_dict[path_name]:
                 for path_with_id in paths:
-                    path_id, path = path_with_id
+                    path_id, path, planner_type = path_with_id
                     if pid_from_sg == path_id:
-                        ret.append((path_id, path_name, path))
+                        ret.append((path_id, path_name, path, planner_type))
                         break
         return ret;
 
@@ -837,7 +844,7 @@ class PathLibrary:
         for f in os.listdir(self._get_full_lib_name(lib_name)):
             if f.find("pickle") == -1 and f.find(SG_ROOT_NAME) == -1:
                 paths = self._get_paths(f)
-                for pid, p in paths:
+                for pid, p, planner_type in paths:
                     dists.append(self._total_dist(s, g, p))
         dists.sort()
         return dists
@@ -862,7 +869,7 @@ class PathLibrary:
         #self._load_trees()
         #self._load_sg_cache(leaf_node.name) #load the cache from the file
         closest_n = self._find_closest_n_in_all(s, g, leaf_node, n=n)
-        pids, path_names, paths = zip(*closest_n)
+        pids, path_names, paths, planner_types = zip(*closest_n)
         #closest = closest_n[0]
         return paths
 
@@ -885,12 +892,15 @@ class PathLibrary:
                 path_list = self._get_old_paths(old_paths_file+f);
                 print "reorganize", f, len(path_list);
                 for p in path_list:
-                    self.store_path(p);
+                    # store path: new path, new_path_planner, robot name, joint name, prev path
+                    pid, path, planner_type = p
+                    robot_name, joint_names = self._get_robot_name_and_joints(self.current_lib_name)
+                    self.store_path(path, planner_type, robot_name, joint_names);
 
     def get_path_point(self, pid, index, lib_name):
         for f in os.listdir(self._get_full_lib_name(lib_name)):
             if f.find(ROOT_NAME) == 0:
-                for path_id, path in self._get_paths(f):
+                for path_id, path, planner_type in self._get_paths(f):
                     if path_id == pid:
                         if index < len(path):
                             print "Path library: path (in %s) is %s" % (f, ' '.join([str(x) for x in path[index]]))
