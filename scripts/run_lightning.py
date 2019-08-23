@@ -280,6 +280,7 @@ class Lightning:
         self.model.zero_grad()
         bi=plan_general.to_var(bi)
         bt=plan_general.to_var(bt)
+        print(bt)
         self.model.observe(bi, 0, bt)
         # write trained model to file
         utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
