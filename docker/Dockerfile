@@ -146,12 +146,12 @@ RUN ./install-ompl-ubuntu.sh --python
 
 
 ######### pip install dependencies
-RUN pip2 install --upgrade pip \
-&& pip2 install --upgrade setuptools \
-&& pip2 install --ignore-installed matplotlib==2.0.2 pyassimp==4.1.3 \
-&& pip2 install cython \
-&& pip2 install quadprog nltk pypcd \\
-&& pip2 install numpy --upgrade
+RUN pip install --upgrade pip==9.0.3 \
+&& pip install --upgrade setuptools \
+&& pip install --ignore-installed matplotlib==2.0.2 pyassimp==4.1.3 \
+&& pip install cython \
+&& pip install quadprog nltk pypcd \\
+&& pip install numpy --upgrade
 
 
 ################## trying for CUDA 9.0 ##################################
