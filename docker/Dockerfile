@@ -151,7 +151,7 @@ RUN pip2 install --upgrade pip \
 && pip install --ignore-installed matplotlib==2.0.2 pyassimp==4.1.3 \
 && pip install cython \
 && pip install quadprog nltk pypcd \\
-&& pip install numpy --upgrade
+&& pip install numpy
 
 
 ################## trying for CUDA 9.0 ##################################
