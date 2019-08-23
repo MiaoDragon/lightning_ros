@@ -145,7 +145,7 @@ RUN apt-get update && \
 RUN ./install-ompl-ubuntu.sh --python
 
 
-hash -d pip
+RUN hash -d pip
 ######### pip install dependencies
 RUN pip install --upgrade pip \
 && pip install --upgrade setuptools \
