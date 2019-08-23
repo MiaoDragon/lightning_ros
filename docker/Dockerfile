@@ -150,7 +150,7 @@ RUN pip2 install --upgrade pip \
 && pip install --upgrade setuptools \
 && pip install --ignore-installed matplotlib==2.0.2 pyassimp==4.1.3 \
 && pip install cython \
-&& pip install quadprog nltk pypcd \\
+&& pip install quadprog nltk pypcd \
 && pip install numpy
 
 
