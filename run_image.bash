@@ -18,8 +18,8 @@ docker run -it \
     -env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
     -v $PWD:/root/catkin_ws/src/lightning_ros/ \
-    --mount type=bind,source=/home/yinglong/Documents/MotionPlanning/lightning/data,target=/root/catkin_ws/src/lightning_ros/data,readonly \
-    --mount type=bind,source=/home/yinglong/Documents/MotionPlanning/lightning/results,target=/root/catkin_ws/src/lightning_ros/results \
+    --mount type=bind,source=/media/arclabdl1/HD1/YLmiao/data,target=/root/catkin_ws/src/lightning_ros/data,readonly \
+    --mount type=bind,source=/media/arclabdl1/HD1/YLmiao/results/lightning_res,target=/root/catkin_ws/src/lightning_ros/results \
     --runtime=nvidia \
     lightning_mpnet \
     bash
