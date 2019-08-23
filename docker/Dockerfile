@@ -269,7 +269,7 @@ RUN apt-get update && apt-get install -y \
 # RUN pip install torchvision
 
 # run below for CUDA 9.0 PyTorch
-RUN pip install torch=1.1.0 torchvision
+RUN pip install torch==1.1.0 torchvision
 
 # copy in yaml file to load rrt* as default planner
 #COPY ./ompl_planning.yaml ${CATKIN_WS}/src/moveit_robots/baxter/baxter_moveit_config/config/
