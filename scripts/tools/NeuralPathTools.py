@@ -133,6 +133,7 @@ class PlanTrajectoryWrapper:
         device = torch.device(device_name)
         if device_name != 'cpu':
             torch.cuda.set_device(device)
+        self.device = device
         self.neural_planners = [utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)]
         rospy.loginfo('%s Initializing planner for MPNet...' % (rospy.get_name()))
         ## TODO: might consider adding locks for multiple MPNets, but currently not needed
@@ -313,10 +314,12 @@ class PlanTrajectoryWrapper:
                 step_sz = 0.1
             if time_flag:
                 path, time_norm = plan_general.neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
-                                    normalize_func, unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
+                                    normalize_func, unnormalize_func, t==0, step_sz=step_sz, \
+                                    time_flag=time_flag, device=self.device)
             else:
                 path = plan_general.neural_replan(mpNet, path, obc[i], obs[i], IsInCollision, \
-                                    normalize_func, unnormalize_func, t==0, step_sz=step_sz, time_flag=time_flag)
+                                    normalize_func, unnormalize_func, t==0, step_sz=step_sz, \
+                                    time_flag=time_flag, device=self.device)
             path = plan_general.lvc(path, obc[i], IsInCollision, step_sz=step_sz)
             if plan_general.feasibility_check(path, obc[i], IsInCollision, step_sz=0.01):
                 fp = 1

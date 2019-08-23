@@ -137,6 +137,7 @@ class Lightning:
         # set device (CUDA or CPU)
         device_name = rospy.get_param('model/server_device')
         device = torch.device(device_name)
+        self.device = device
         if device_name != 'cpu':
             torch.cuda.set_device(device)
         self.model = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)
@@ -278,8 +279,8 @@ class Lightning:
         bi = torch.FloatTensor(bi)
         bt = torch.FloatTensor(targets)
         self.model.zero_grad()
-        bi=plan_general.to_var(bi)
-        bt=plan_general.to_var(bt)
+        bi=utility.to_var(bi, self.device)
+        bt=utility.to_var(bt, self.device)
         print(bt)
         self.model.observe(bi, 0, bt)
         # write trained model to file

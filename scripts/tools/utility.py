@@ -5,9 +5,8 @@ import rospy
 import os
 import importlib
 
-def to_var(x, volatile=False):
-    if torch.cuda.is_available():
-        x = x.cuda()
+def to_var(x, device=torch.device('cpu'), volatile=False):
+    x = x.to(device)
     return Variable(x, volatile=volatile)
 
 def save_state(net, torch_seed, np_seed, py_seed, fname):

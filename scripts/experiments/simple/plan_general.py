@@ -79,12 +79,13 @@ def lvc(path, obc, IsInCollision, step_sz=DEFAULT_STEP):
                 return lvc(pc,obc,IsInCollision,step_sz=step_sz)
     return path
 
-def neural_replan(mpNet, path, obc, obs, IsInCollision, normalize, unnormalize, init_plan_flag, step_sz=DEFAULT_STEP, time_flag=False):
+def neural_replan(mpNet, path, obc, obs, IsInCollision, normalize, unnormalize, init_plan_flag, step_sz=DEFAULT_STEP, \
+                time_flag=False, device=torch.device('cpu')):
     if init_plan_flag:
         # if it is the initial plan, then we just do neural_replan
         MAX_LENGTH = 80
         mini_path, time_d = neural_replanner(mpNet, path[0], path[-1], obc, obs, IsInCollision, \
-                                            normalize, unnormalize, MAX_LENGTH, step_sz=step_sz)
+                                            normalize, unnormalize, MAX_LENGTH, step_sz=step_sz, device=device)
         if mini_path:
             if time_flag:
                 return removeCollision(mini_path, obc, IsInCollision), time_d
@@ -111,7 +112,7 @@ def neural_replan(mpNet, path, obc, obs, IsInCollision, normalize, unnormalize, 
         else:
             # plan mini path
             mini_path, time_d = neural_replanner(mpNet, start, goal, obc, obs, IsInCollision, \
-                                                normalize, unnormalize, MAX_LENGTH, step_sz=step_sz)
+                                                normalize, unnormalize, MAX_LENGTH, step_sz=step_sz, device=device)
             #print('mini path length: %d' % (len(mini_path)))
             time_norm += time_d
             if mini_path:
@@ -125,7 +126,8 @@ def neural_replan(mpNet, path, obc, obs, IsInCollision, normalize, unnormalize, 
         return new_path
 
 
-def neural_replanner(mpNet, start, goal, obc, obs, IsInCollision, normalize, unnormalize, MAX_LENGTH, step_sz=DEFAULT_STEP):
+def neural_replanner(mpNet, start, goal, obc, obs, IsInCollision, normalize, unnormalize, MAX_LENGTH, step_sz=DEFAULT_STEP,\
+                    device=torch.device('cpu')):
     # plan a mini path from start to goal
     # obs: tensor
     itr=0
@@ -153,7 +155,7 @@ def neural_replanner(mpNet, start, goal, obc, obs, IsInCollision, normalize, unn
             #print(ip1)
             #print('after unnormalizationg....')
             #print(unnormalize(torch.tensor(ip1)))
-            ip1=to_var(ip1)
+            ip1=to_var(ip1, device)
             start=mpNet(ip1).squeeze(0)
             # unnormalize to world size
             start=start.data.cpu()
@@ -171,7 +173,7 @@ def neural_replanner(mpNet, start, goal, obc, obs, IsInCollision, normalize, unn
             time0 = time.time()
             ip2=normalize(ip2)
             time_norm += time.time() - time0
-            ip2=to_var(ip2)
+            ip2=to_var(ip2, device)
             goal=mpNet(ip2).squeeze(0)
             # unnormalize to world size
             goal=goal.data.cpu()
@@ -190,28 +192,6 @@ def neural_replanner(mpNet, start, goal, obc, obs, IsInCollision, normalize, unn
         for p2 in range(len(pB)-1,-1,-1):
             new_path.append(pB[p2])
     return new_path, time_norm
-
-
-def complete_replan_global(mpNet, path, true_path, true_path_length, obc, obs, obs_i, \
-                           normalize, step_sz=DEFAULT_STEP):
-    # use the training dataset as demonstration (which was trained by rrt*)
-    # input path: list of tensor
-    # obs: tensor
-    demo_path = true_path[:true_path_length]
-    #demo_path = [torch.from_numpy(p).type(torch.FloatTensor) for p in demo_path]
-    dataset, targets, env_indices = transformToTrain(demo_path, len(demo_path), obs, obs_i)
-    added_data = list(zip(dataset,targets,env_indices))
-    bi = np.concatenate( (obs.numpy().reshape(1,-1).repeat(len(dataset),axis=0), dataset), axis=1).astype(np.float32)
-    bi = torch.FloatTensor(bi)
-    bt = torch.FloatTensor(targets)
-    # normalize first
-    bi, bt = normalize(bi), normalize(bt)
-    mpNet.zero_grad()
-    bi=to_var(bi)
-    bt=to_var(bt)
-    mpNet.observe(bi, 0, bt)
-    demo_path = [torch.from_numpy(p).type(torch.FloatTensor) for p in demo_path]
-    return demo_path, added_data
 
 def transformToTrain(path, path_length, obs, obs_i):
     dataset=[]
