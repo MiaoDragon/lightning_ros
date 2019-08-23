@@ -114,7 +114,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         planning functions to directly use OMPL planning library.
     """
 
-    def __init__(self, node_type, num_planners=1):
+    def __init__(self, node_type, num_planners=1, device='cpu'):
         """
           Constructor for OMPLPlanTrajectoryWrapper.
 
@@ -134,7 +134,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
               generally "pfs" or "rr".
             num_planners (int): The number of planner nodes that are being used.
         """
-        NeuralPathTools.PlanTrajectoryWrapper.__init__(self, node_type, num_planners)
+        NeuralPathTools.PlanTrajectoryWrapper.__init__(self, node_type, num_planners, device)
         ## add OMPL setting for different environments
         self.env_name = rospy.get_param('env_name')
         self.planner_name = rospy.get_param('planner_name')
