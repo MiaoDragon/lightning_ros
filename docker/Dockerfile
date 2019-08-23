@@ -146,7 +146,7 @@ RUN ./install-ompl-ubuntu.sh --python
 
 
 ######### pip install dependencies
-RUN pip install --upgrade pip==9.0.3 \
+RUN pip2 install --upgrade pip \
 && pip install --upgrade setuptools \
 && pip install --ignore-installed matplotlib==2.0.2 pyassimp==4.1.3 \
 && pip install cython \
