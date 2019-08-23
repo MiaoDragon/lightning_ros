@@ -76,7 +76,7 @@ class PFSNode:
             rospy.wait_for_service(PLANNING_SCENE_SERV_NAME);
             PlanTrajectoryWrapper = NeuralPathTools.PlanTrajectoryWrapper
 
-        self.plan_trajectory_wrapper = PlanTrajectoryWrapper("pfs")
+        self.plan_trajectory_wrapper = PlanTrajectoryWrapper("pfs", device=rospy.get_param('model/rr_device'))
         self.planner_config_name = rospy.get_param("planner_config_name")
         self.stop_lock = threading.Lock()
         self.current_joint_names = []

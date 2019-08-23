@@ -14,3 +14,6 @@ memory_strength: 0.5
 grad_step: 1
 opt_type: 'Adagrad'
 learning_rate: 0.001
+server_device: 'cuda:3'
+pfs_device: 'cuda:2'
+rr_device: 'cuda:0'
