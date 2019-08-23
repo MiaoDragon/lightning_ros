@@ -95,7 +95,7 @@ class RRNode:
         self.current_joint_names = []
         self.current_group_name = ""
         self.plan_trajectory_wrapper = PlanTrajectoryWrapper("rr", int(rospy.get_param("~num_rr_planners")), \
-                                            device=rospy.get_param('model/rr_device'))
+                                            device_name=rospy.get_param('model/rr_device'))
         self.invalid_section_wrapper = InvalidSectionWrapper()
         self.path_library = PathLibrary(rospy.get_param("~path_library_dir"), rospy.get_param("step_size"), node_size=int(rospy.get_param("~path_library_path_node_size")), sg_node_size=int(rospy.get_param("~path_library_sg_node_size")), dtw_dist=float(rospy.get_param("~dtw_distance")))
         self.num_paths_checked = int(rospy.get_param("~num_paths_to_collision_check"))

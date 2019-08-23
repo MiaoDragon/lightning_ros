@@ -107,7 +107,7 @@ class PlanTrajectoryWrapper:
         extracting the useful information from the response.
     """
 
-    def __init__(self, node_type, num_planners=1, device='cpu'):
+    def __init__(self, node_type, num_planners=1, device_name='cpu'):
         """
           Constructor for PlanTrajectoryWrapper.
 
@@ -130,7 +130,9 @@ class PlanTrajectoryWrapper:
         self.model_path = rospy.get_param('model/model_path')
         self.model_name = rospy.get_param('model/model_name')
         #self.neural_planners = ['%s_neural_planner_node0/mpnet' % (node_type)]
-        device = torch.device(device)
+        device = torch.device(device_name)
+        if device_name != 'cpu':
+            torch.cuda.set_device(device)
         self.neural_planners = [utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)]
         rospy.loginfo('%s Initializing planner for MPNet...' % (rospy.get_name()))
         ## TODO: might consider adding locks for multiple MPNets, but currently not needed

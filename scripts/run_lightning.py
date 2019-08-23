@@ -135,7 +135,10 @@ class Lightning:
         self.model_name = rospy.get_param('model/model_name')
 
         # set device (CUDA or CPU)
-        device = torch.device(rospy.get_param('model/server_device'))
+        device_name = rospy.get_param('model/server_device')
+        device = torch.device(device_name)
+        if device_name != 'cpu':
+            torch.cuda.set_device(device)
         self.model = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)
         ## # TODO: move model to GPU
         self.retrieved_and_final_path = [None, None, None, None]
