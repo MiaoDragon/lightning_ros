@@ -1,11 +1,10 @@
-######### setup user group
-RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
-USER docker
-
-######### load GPU
 # Loading the main docker files
 FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04
 # FROM cuda-9.0-local
+
+######### setup user group
+RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+USER root
 
 
 # install packages
@@ -67,8 +66,8 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 ######### Install Catkin
-RUN  pip install rospkg
-RUN  pip install -U catkin_tools
+RUN  pip install rospkg \
+&&  pip install -U catkin_tools
 
 # bootstrap rosdep
 RUN rosdep init \
@@ -135,18 +134,25 @@ RUN catkin build
 RUN source devel/setup.bash
 
 # install OMPL
+RUN apt-get update \
+  && apt-get install -y wget \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /root/
 RUN wget https://ompl.kavrakilab.org/install-ompl-ubuntu.sh
 RUN chmod u+x install-ompl-ubuntu.sh
+RUN apt-get update && \
+      apt-get -y install sudo
 RUN ./install-ompl-ubuntu.sh --python
 
 
 ######### pip install dependencies
-RUN pip install --upgrade setuptools
-RUN pip install matplotlib==2.0.2 pyassimp==4.1.3
-RUN pip install cython
-RUN pip install quadprog nltk pypcd
-RUN pip install numpy --upgrade
+RUN pip install --upgrade pip \
+&& pip install --upgrade setuptools \
+&& pip install --ignore-installed matplotlib==2.0.2 pyassimp==4.1.3 \
+&& pip install cython \
+&& pip install quadprog nltk pypcd \\
+&& pip install numpy --upgrade
+
 
 ################## trying for CUDA 9.0 ##################################
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates apt-transport-https gnupg-curl && \
@@ -266,7 +272,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install torch torchvision
 
 # copy in yaml file to load rrt* as default planner
-COPY ./ompl_planning.yaml ${CATKIN_WS}/src/moveit_robots/baxter/baxter_moveit_config/config/
+#COPY ./ompl_planning.yaml ${CATKIN_WS}/src/moveit_robots/baxter/baxter_moveit_config/config/
 
 
 # Exposing the ports

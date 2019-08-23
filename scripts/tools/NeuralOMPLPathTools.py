@@ -57,10 +57,10 @@ import NeuralPathTools
 from architecture.GEM_end2end_model import End2EndMPNet
 from ompl import base as ob
 from ompl import geometric as og
-from simple_env import plan_general
-from simple_env import plan_c2d, plan_s2d, plan_r2d, plan_r3d
-from simple_env import data_loader_2d, data_loader_r2d, data_loader_r3d
-from simple_env import utility_s2d, utility_c2d, utility_r2d, utility_r3d
+from experiments.simple import plan_general
+from experiments.simple import plan_c2d, plan_s2d, plan_r2d, plan_r3d
+from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
+from experiments.simple import utility_s2d, utility_c2d, utility_r2d, utility_r3d
 import torch
 import argparse
 import pickle
@@ -239,7 +239,9 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
+        plan_time = time.time()
         solved = ss.solve(planning_time)
+        plan_time = time.time() - plan_time
         if solved:
             rospy.loginfo("%s Plan Trajectory Wrapper: OMPL Planner solved successfully." % (rospy.get_name()))
             # obtain planned path
@@ -248,9 +250,9 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             for k in range(len(ompl_path)):
                 solutions[k][0] = float(ompl_path[k][0])
                 solutions[k][1] = float(ompl_path[k][1])
-            return solutions.tolist()
+            return plan_time, solutions.tolist()
         else:
-            return None
+            return np.inf, None
 
     def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
         """
@@ -292,7 +294,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         mpNet = self.neural_planners[0]
         time_flag = False
         fp = 0
-        time0 = time.time()
+        plan_time = time.time()
         for t in range(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
@@ -315,13 +317,13 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
                 break
         if fp:
             # only for successful paths
-            time1 = time.time() - time0
-            time1 -= time_norm
-            print('test time: %f' % (time1))
+            plan_time = time.time() - plan_time
+            plan_time -= time_norm
+            print('test time: %f' % (plan_time))
             ## TODO: make sure path is indeed list
-            return path
+            return plan_time, path
         else:
-            return None
+            return np.inf, None
 
 class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
     """

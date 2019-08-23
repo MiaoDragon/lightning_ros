@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from .. utility import *
+from  tools.utility import *
 import time
 DEFAULT_STEP = 2.
 def removeCollision(path, obc, IsInCollision):

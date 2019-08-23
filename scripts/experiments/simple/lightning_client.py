@@ -1,14 +1,14 @@
-from experiments.simple data_loader_2d, data_loader_r2d, data_loader_r3d
+import sys
+sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
 import argparse
 import pickle
-import sys
 import time
 import os
 import numpy as np
 import rospy
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
 from lightning.msg import Float64Array, Float64Array2D
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest, GetMotionPlanResponse
 from moveit_msgs.msg import JointConstraint, Constraints

@@ -82,3 +82,11 @@ def create_and_load_model(ModelConstr, fname, device):
     if os.path.isfile(fname):
         load_opt_state(model, fname)
     return model
+
+def get_normalizer():
+    # this utility function specifies how to normalize state
+    utility_path = rospy.get_param('model/normalizer_path')
+    world_size = rospy.get_param('model/world_size')
+    normalize_module = importlib.import_module(utility_path)
+    normalize_func = lambda x: normalize_module.normalize(x, world_size)
+    return normalize_func

@@ -56,6 +56,8 @@ from std_msgs.msg import UInt8
 import utility
 from architecture.GEM_end2end_model import End2EndMPNet
 import torch
+import numpy as np
+import time
 # Names of Topics/Services to be advertised/used by these wrappers.
 # The name of the collision checking service.
 COLLISION_CHECK = "collision_check"
@@ -245,22 +247,25 @@ class PlanTrajectoryWrapper:
         #call the planner
         rospy.wait_for_service(self.planners[planner_number])
         rospy.loginfo("Plan Trajectory Wrapper: sent request to service %s" % planner_client.resolved_name)
+        plan_time = np.inf
         try:
+            plan_time = time.time()
             response = planner_client(req)
+            plan_time = time.time() - plan_time
         except rospy.ServiceException, e:
             rospy.loginfo("%s Plan Trajectory Wrapper: service call failed: %s"
             % (rospy.get_name(), e))
-            return None
+            return plan_time, None
 
         # Pull a list of joint positions out of the returned plan.
         rospy.loginfo("%s Plan Trajectory Wrapper: %s returned" \
         % (rospy.get_name(), self.planners[planner_number]))
         if response.motion_plan_response.error_code.val == response.motion_plan_response.error_code.SUCCESS:
-            return [pt.positions for pt in response.motion_plan_response.trajectory.joint_trajectory.points]
+            return plan_time, [pt.positions for pt in response.motion_plan_response.trajectory.joint_trajectory.points], [pt.positions for pt in response.motion_plan_response.trajectory.joint_trajectory.points]
         else:
             rospy.loginfo("%s Plan Trajectory Wrapper: service call to %s was unsuccessful"
             % (rospy.get_name(), planner_client.resolved_name))
-            return None
+            return plan_time, None, None
 
     def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
         """
@@ -295,7 +300,7 @@ class PlanTrajectoryWrapper:
         def IsInCollision(state, obc):
             return not stateValidate(state, group_name, constraints=None, print_depth=False)
         fp = 0
-        time0 = time.time()
+        plan_time = time.time()
         for t in range(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
@@ -317,13 +322,13 @@ class PlanTrajectoryWrapper:
                 break
         if fp:
             # only for successful paths
-            time1 = time.time() - time0
-            time1 -= time_norm
-            print('test time: %f' % (time1))
+            plan_time = time.time() - plan_time
+            plan_time -= time_norm
+            print('test time: %f' % (plan_time))
             ## TODO: make sure path is indeed list
-            return path
+            return plan_time, path, normalize_func(path)
         else:
-            return None
+            return np.inf, None, None
 
 
 

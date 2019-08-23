@@ -61,7 +61,7 @@ from std_msgs.msg import Float32, UInt8
 from trajectory_msgs.msg import JointTrajectoryPoint
 from tools import NeuralOMPLPathTools, NeuralPathTools
 from tools import utility
-from tools.simple_env import plan_general
+from experiments.simple import plan_general
 from architecture.GEM_end2end_model import End2EndMPNet
 
 import numpy as np
@@ -127,6 +127,8 @@ class Lightning:
           # parts of the lightning planner to run.
           self.stat_pub = rospy.Publisher("stats", Stats, queue_size=10)
 
+
+        self.normalize_func = utility.get_normalizer()
         #### neural network setup
         # construct model from fed environment
         self.model_path = rospy.get_param('model/model_path')
@@ -151,7 +153,7 @@ class Lightning:
             rospy.loginfo('Lightning: Saving initial network parameters...')
             utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
         # notify to synchronize model weights
-        rospy.sleep(1)  # sleep so that subscriber can obtain message
+        rospy.sleep(2)  # sleep so that subscriber can obtain message
         rospy.loginfo('Lightning: Notify planner to update network...')
         self._notify_update()
 
@@ -161,7 +163,7 @@ class Lightning:
         # send 4 signals
         for i in range(4):
             self._model_trained_publisher.publish(UInt8(0))
-            rospy.sleep(0.1)
+            rospy.sleep(1)
         #while True:
         #    self._model_trained_publisher.publish(UInt8(0))
         #    print(time.time()-start_time)
@@ -265,16 +267,13 @@ class Lightning:
         obs = obs.values
         obs = torch.FloatTensor(obs)
 
-        # # TODO: training code needs to be written (data format change, then call observe)
-        ## TODO: debug training code, to see if the network is actually training
         dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, 0)
         added_data = list(zip(dataset,targets,env_indices))
         bi = np.concatenate( (obs.numpy().reshape(1,-1).repeat(len(dataset),axis=0), dataset), axis=1).astype(np.float32)
+        bi = self.normalize_func(bi)
+        targets = self.normalize_func(targets)
         bi = torch.FloatTensor(bi)
         bt = torch.FloatTensor(targets)
-        # normalize first
-        ## TODO: here write normalize
-        #bi, bt = normalize(bi), normalize(bt)
         self.model.zero_grad()
         bi=plan_general.to_var(bi)
         bt=plan_general.to_var(bt)

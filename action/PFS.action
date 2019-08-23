@@ -13,7 +13,6 @@ duration allowed_planning_time
 ---
 #planned path: if empty, then planning failed
 Float64Array[] path
-
 Status status
 PlannerType planner_type
 ---

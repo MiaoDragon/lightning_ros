@@ -17,7 +17,11 @@ docker run -it \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     -env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    -v $PWD:/root/catkin_ws/src/baxter_mpnet_experiments/ \
+    -v $PWD:/root/catkin_ws/src/lightning_ros/ \
+    --mount type=bind,source=/home/yinglong/Documents/MotionPlanning/lightning/data,target=/root/catkin_ws/src/lightning_ros/data,readonly \
+    --mount type=bind,source=/home/yinglong/Documents/MotionPlanning/lightning/results,target=/root/catkin_ws/src/lightning_ros/results \
     --runtime=nvidia \
-    baxter-moveit-docker \
+    lightning_mpnet \
     bash
+
+# add this under -v when using GPU    --runtime=nvidia \
