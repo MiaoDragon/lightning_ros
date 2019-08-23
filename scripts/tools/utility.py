@@ -33,7 +33,7 @@ def load_seed(fname):
     checkpoint = torch.load(fname)
     return checkpoint['torch_seed'], checkpoint['np_seed'], checkpoint['py_seed']
 
-def create_model(ModelConstr):
+def create_model(ModelConstr, device):
     mlp_arch_path = rospy.get_param('model/mlp_arch_path')
     cae_arch_path = rospy.get_param('model/cae_arch_path')
     total_input_size = rospy.get_param('model/total_input_size')
@@ -50,7 +50,7 @@ def create_model(ModelConstr):
     MLP = mlp.MLP
     model = ModelConstr(total_input_size, AE_input_size, mlp_input_size, \
             output_size, 'deep', n_tasks, n_memories, memory_strength, grad_step, \
-            CAE, MLP)
+            CAE, MLP, device)
     return model
 
 def create_optimizer(model):
@@ -67,7 +67,7 @@ def create_optimizer(model):
 
 def create_and_load_model(ModelConstr, fname, device):
     rospy.loginfo('Creating and loading model...')
-    model = create_model(ModelConstr)
+    model = create_model(ModelConstr, device)
     if os.path.isfile(fname):
         # previous trained model exists, load model
         load_net_state(model, fname)

@@ -6,7 +6,7 @@ import copy
 # Auxiliary functions useful for GEM's inner optimization.
 class End2EndMPNet(nn.Module):
     def __init__(self, total_input_size, AE_input_size, mlp_input_size, output_size, AEtype, \
-                 n_tasks, n_memories, memory_strength, grad_step, CAE, MLP):
+                 n_tasks, n_memories, memory_strength, grad_step, CAE, MLP, device=torch.cuda.device('cpu')):
         super(End2EndMPNet, self).__init__()
         self.encoder = CAE.Encoder()
         self.mlp = MLP(mlp_input_size, output_size)
@@ -23,9 +23,8 @@ class End2EndMPNet(nn.Module):
         self.memory_data = torch.FloatTensor(
             n_tasks, self.n_memories, total_input_size)
         self.memory_labs = torch.FloatTensor(n_tasks, self.n_memories, output_size)
-        if torch.cuda.is_available():
-            self.memory_data = self.memory_data.cuda()
-            self.memory_labs = self.memory_labs.cuda()
+        self.memory_data = self.memory_data.to(device)
+        self.memory_labs = self.memory_labs.to(device)
 
         # allocate temporary synaptic memory
         self.grad_dims = []
@@ -33,8 +32,7 @@ class End2EndMPNet(nn.Module):
             self.grad_dims.append(param.data.numel())
         # edit: need one more dimension for newly observed data
         self.grads = torch.Tensor(sum(self.grad_dims), n_tasks+1)
-        if torch.cuda.is_available():
-            self.grads = self.grads.cuda()
+        self.grads = self.grads.to(device)
         # allocate counters
         self.observed_tasks = []
         self.old_task = -1
@@ -43,6 +41,7 @@ class End2EndMPNet(nn.Module):
         self.grad_step = grad_step
         self.total_input_size = total_input_size
         self.AE_input_size = AE_input_size
+        self.device = device
     def clear_memory(self):
         # set the counter to 0
         self.mem_cnt[:] = 0
@@ -76,9 +75,8 @@ class End2EndMPNet(nn.Module):
                 self.mem_cnt[tasks[i]] = 0
             x = torch.tensor(xs[i])
             y = torch.tensor(ys[i])
-            if torch.cuda.is_available():
-                x = x.cuda()
-                y = y.cuda()
+            x = x.to(self.device)
+            y = y.to(self.device)
             self.remember(x, tasks[i], y)
 
     def remember(self, x, t, y):
@@ -148,8 +146,7 @@ class End2EndMPNet(nn.Module):
                 # copy gradient
                 new_t = max(self.observed_tasks)+1  # a new dimension
                 store_grad(self.parameters, self.grads, self.grad_dims, new_t)
-                indx = torch.cuda.LongTensor(self.observed_tasks) if torch.cuda.is_available() \
-                    else torch.LongTensor(self.observed_tasks)   # here we need all observed tasks
+                indx = torch.LongTensor(self.observed_tasks).to(self.device) # here we need all observed tasks
                 #indx = torch.cuda.FloatTensor(self.observed_tasks[:-1]) if torch.cuda.is_available() \
                 #    else torch.FloatTensor(self.observed_tasks[:-1])
                 # here is different, we are using new_t instead of t to ditinguish between
