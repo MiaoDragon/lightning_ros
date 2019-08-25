@@ -277,7 +277,8 @@ class Lightning:
         self.planner_types.append(final_planner_type)
         self.plan_times.append(self.plan_time)
         # depending on retrieved_planner_type and final_planner, train the network
-        if (retrieved_planner_type is None) or (retrieved_planner_type == PlannerType.NEURAL and final_planner_type == PlannerType.NEURAL):
+        if (retrieved_planner_type is None and final_planner_type == PlannerType.NEURAL) \
+            or (retrieved_planner_type == PlannerType.NEURAL and final_planner_type == PlannerType.NEURAL):
             utility.save_info(self.losses, self.planner_types, self.plan_times, self.model_path+'lightning_res.pkl')
             return
         rospy.loginfo('Lightning: Training Neural Network...')
