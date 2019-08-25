@@ -4,6 +4,7 @@ import copy
 import rospy
 import os
 import importlib
+from filelock import FileLock
 
 def to_var(x, device=torch.device('cpu'), volatile=False):
     x = x.to(device)
@@ -18,7 +19,12 @@ def save_state(net, torch_seed, np_seed, py_seed, fname):
         'np_seed': np_seed,
         'py_seed': py_seed
     }
-    torch.save(states, fname)
+    try:
+        with FileLock(fname):
+            torch.save(states, fname)
+    except:
+        # maybe a Ctrl+C here
+        pass
 
 def save_info(loss, planner_type, plan_time, fname):
     states = {
@@ -30,8 +36,12 @@ def save_info(loss, planner_type, plan_time, fname):
 
 def load_net_state(net, fname):
     checkpoint = torch.load(fname)
-    net.load_state_dict(checkpoint['state_dict'])
-
+    try:
+        with FileLock(fname):
+            net.load_state_dict(checkpoint['state_dict'])
+    except:
+        pass
+        
 def load_opt_state(net, fname):
     checkpoint = torch.load(fname)
     net.opt.load_state_dict(checkpoint['optimizer'])

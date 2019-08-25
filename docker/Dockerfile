@@ -271,6 +271,9 @@ RUN apt-get update && apt-get install -y \
 # run below for CUDA 9.0 PyTorch
 RUN pip install torch==1.1.0 torchvision==0.3.0
 
+# multiprocess safety
+RUN pip install filelock
+
 # copy in yaml file to load rrt* as default planner
 #COPY ./ompl_planning.yaml ${CATKIN_WS}/src/moveit_robots/baxter/baxter_moveit_config/config/
 

@@ -362,7 +362,7 @@ class RRNode:
         self.stats_pub.publish(self.stats_msg)
         self.working_lock.release()
 
-    def _path_repair(self, original_path, planning_time, invalid_sections=None, use_parallel_repairing=False):
+    def _path_repair(self, original_path, planning_time, invalid_sections=None, use_parallel_repairing=True):
         """
           Goes through each invalid section in a path and calls a planner to
             repair it, with the potential for multi-threading. Returns the

@@ -176,7 +176,7 @@ class Lightning:
         # do this for 2 seconds to make sure all models got updated
         #start_time = time.time()
         # send 4 signals
-        for i in range(4):
+        for i in range(2):
             self._model_trained_publisher.publish(UInt8(0))
             rospy.sleep(0.5)
         #while True:
