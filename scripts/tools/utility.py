@@ -20,6 +20,14 @@ def save_state(net, torch_seed, np_seed, py_seed, fname):
     }
     torch.save(states, fname)
 
+def save_info(loss, planner_type, plan_time, fname):
+    states = {
+        'loss': loss,
+        'planner_type': planner_type,
+        'plan_time': plan_time
+    }
+    torch.save(states, fname)
+
 def load_net_state(net, fname):
     checkpoint = torch.load(fname)
     net.load_state_dict(checkpoint['state_dict'])

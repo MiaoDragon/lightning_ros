@@ -131,9 +131,16 @@ class Lightning:
         self.normalize_func = utility.get_normalizer()
         #### neural network setup
         # construct model from fed environment
+        self.data_all = []
+        self.num_path_trained = 0
+        self.num_trained_samples = 0
         self.model_path = rospy.get_param('model/model_path')
         self.model_name = rospy.get_param('model/model_name')
-
+        self.freq_rehersal = rospy.get_param('model/freq_rehersal')
+        self.batch_rehersal = rospy.get_param('model/batch_rehersal')
+        self.freq_save = rospy.get_param('model/freq_save')
+        self.plan_times = []
+        self.plan_time = 0.
         # set device (CUDA or CPU)
         device_name = rospy.get_param('model/server_device')
         device = torch.device(device_name)
@@ -141,7 +148,6 @@ class Lightning:
         if device_name != 'cpu':
             torch.cuda.set_device(device)
         self.model = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)
-        ## # TODO: move model to GPU
         self.retrieved_and_final_path = [None, None, None, None]
         # record current planning path
         # format: [planner_type, path, planner_type, path]
@@ -161,13 +167,18 @@ class Lightning:
         rospy.loginfo('Lightning: Notify planner to update network...')
         self._notify_update()
 
+        # for information of training
+        self.losses = []
+        self.planner_types = []
+        self.time = []
+
     def _notify_update(self):
         # do this for 2 seconds to make sure all models got updated
         #start_time = time.time()
         # send 4 signals
         for i in range(4):
             self._model_trained_publisher.publish(UInt8(0))
-            rospy.sleep(1)
+            rospy.sleep(0.5)
         #while True:
         #    self._model_trained_publisher.publish(UInt8(0))
         #    print(time.time()-start_time)
@@ -262,9 +273,13 @@ class Lightning:
         4. notify planners to update the model
         """
         retrieved_planner_type, retrieved_path, final_planner_type, final_path = self.retrieved_and_final_path
+        # record stats
+        self.planner_types.append(final_planner_type)
+        self.plan_times.append(self.plan_time)
         # depending on retrieved_planner_type and final_planner, train the network
         if (retrieved_planner_type is None) or (retrieved_planner_type == PlannerType.NEURAL and final_planner_type == PlannerType.NEURAL):
-           return
+            utility.save_info(self.losses, self.planner_types, self.plan_times, self.model_path+'lightning_res.pkl')
+            return
         rospy.loginfo('Lightning: Training Neural Network...')
         # receive obstacle information
         obs = rospy.wait_for_message('obstacles/obs', Float64Array)
@@ -272,6 +287,8 @@ class Lightning:
         obs = torch.FloatTensor(obs)
 
         dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, 0)
+        self.data_all += list(zip(dataset, targets, env_indices))
+        self.num_trained_samples += len(targets)
         added_data = list(zip(dataset,targets,env_indices))
         bi = np.concatenate( (obs.numpy().reshape(1,-1).repeat(len(dataset),axis=0), dataset), axis=1).astype(np.float32)
         bi = self.normalize_func(bi)
@@ -281,8 +298,35 @@ class Lightning:
         self.model.zero_grad()
         bi=utility.to_var(bi, self.device)
         bt=utility.to_var(bt, self.device)
-        print(bt)
         self.model.observe(bi, 0, bt)
+        self.num_path_trained += 1
+        # rehersal
+        if self.num_path_trained % self.freq_rehersal == 0 and len(self.data_all) > self.batch_rehersal:
+            rospy.loginfo('Lightning: Rehersal...')
+            print('rehersal...')
+            sample = random.sample(self.data_all, self.batch_rehersal)
+            dataset, targets, env_indices = list(zip(*sample))
+            dataset, targets, env_indices = list(dataset), list(targets), list(env_indices)
+            bi = np.concatenate( (obs[env_indices], dataset), axis=1).astype(np.float32)
+            bt = targets
+            bi = torch.FloatTensor(bi)
+            bt = torch.FloatTensor(bt)
+            bi, bt = self.normalize_func(bi), self.normalize_func(bt)
+            self.model.zero_grad()
+            bi=utility.to_var(bi, self.device)
+            bt=utility.to_var(bt, self.device)
+            self.model.observe(bi, 0, bt, False) # train but don't remember
+        # obtain the loss after training:
+        loss = self.model.loss(self.model.forward(bi), bt)
+        loss = loss.data.cpu()
+        print("loss: %f" % (loss))
+        print('planner type: %d' % (final_planner_type))
+        self.losses.append(loss.data.cpu().item())
+
+        if self.num_path_trained % self.freq_save == 0:
+            # save loss and planner type
+            utility.save_info(self.losses, self.planner_types, self.plan_times, self.model_path+'lightning_res.pkl')
+
         # write trained model to file
         utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
         # notify planners to update the model
@@ -362,6 +406,8 @@ class Lightning:
                     self._special_print("Lightning: Got a path from RR, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from RR")
+                # record the planning time
+                self.plan_time = time.time() - self.start_time
                 if self.publish_stats:
                   stat_msg.time = time.time() - self.start_time
                   stat_msg.rr_won = True
@@ -413,6 +459,7 @@ class Lightning:
                     self._special_print("Lightning: Got a path from PFS, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from PFS")
+                self.plan_time = time.time() - self.start_time
                 if self.publish_stats:
                   stat_msg.time = time.time() - self.start_time
                   self.stat_pub.publish(stat_msg)

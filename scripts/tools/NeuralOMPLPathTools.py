@@ -317,6 +317,9 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
                 fp = 1
                 rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
                 break
+            if time.time() - plan_time >= 2.:
+                # we can't allow the planner to go too long
+                break
         if fp:
             # only for successful paths
             plan_time = time.time() - plan_time

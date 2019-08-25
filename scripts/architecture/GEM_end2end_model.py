@@ -138,7 +138,6 @@ class End2EndMPNet(nn.Module):
             self.zero_grad()
             loss = self.loss(self.forward(x), y)
             loss.backward()
-
             # check if gradient violates constraints
             # treat gradient of current data as a new task (max of observed task + 1)
             # just to give it a new task label

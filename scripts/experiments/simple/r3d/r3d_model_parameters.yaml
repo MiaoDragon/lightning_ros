@@ -1,13 +1,13 @@
 mlp_arch_path: 'architecture.model'
-cae_arch_path: 'architecture.AE.CAE'
-model_path: '/root/catkin_ws/src/lightning_ros/results/simple/s2d/'
-model_name: 'model_s2d.pkl'
-normalizer_path: 'experiments.simple.utility_s2d'
+cae_arch_path: 'architecture.AE.CAE_r3d'
+model_path: '/root/catkin_ws/src/lightning_ros/results/simple/r3d/'
+model_name: 'model_r3d.pkl'
+normalizer_path: 'experiments.simple.utility_r3d'
 world_size: [20, 20, 20]
-total_input_size: 2804
-AE_input_size: 2800
-mlp_input_size: 32
-output_size: 2
+total_input_size: 6006
+AE_input_size: 6000
+mlp_input_size: 66
+output_size: 3
 n_tasks: 1
 n_memories: 10000
 memory_strength: 0.5

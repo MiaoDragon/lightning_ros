@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+#sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+sys.path.insert(1, '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/scripts')
 from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
 import argparse
 import pickle
@@ -37,7 +38,7 @@ def plan(args):
     if args.env_type == 's2d':
         data_loader = data_loader_2d
         # create an SE2 state space
-        time_limit = 60.
+        time_limit = 10.
         ratio = 1.
     elif args.env_type == 'c2d':
         data_loader = data_loader_2d
@@ -52,7 +53,7 @@ def plan(args):
     elif args.env_type == 'r3d':
         data_loader = data_loader_r3d
         # create an SE2 state space
-        time_limit = 60.
+        time_limit = 10.
         ratio = 1.
 
     test_data = data_loader.load_test_dataset(N=args.N, NP=args.NP, s=args.env_idx, sp=args.path_idx, folder=args.data_path)
@@ -144,16 +145,16 @@ def plan(args):
         fes_env.append(fes_path)
         valid_env.append(valid_path)
         print('accuracy up to now: %f' % (np.sum(np.array(fes_env)) / np.sum(np.array(valid_env))))
-    pickle.dump(time_env, open(args.model_path+'time.p', "wb" ))
-    f = open(os.path.join(args.model_path,'accuracy.txt'), 'w')
+    pickle.dump(time_env, open(args.res_path+'time.p', "wb" ))
+    f = open(os.path.join(args.res_path,'accuracy.txt'), 'w')
     valid_env = np.array(valid_env).flatten()
     fes_env = np.array(fes_env).flatten()   # notice different environments are involved
-    seen_test_suc_rate = fes_env.sum() / valid_env.sum()
-    f.write(str(seen_test_suc_rate))
+    suc_rate = float(fes_env.sum()) / valid_env.sum()
+    f.write(str(suc_rate))
     f.close()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_path', type=str, default='../lightning_res/')
+parser.add_argument('--res_path', type=str, default='../lightning_res/')
 parser.add_argument('--env_idx', type=int, default=0, help='from which env')
 parser.add_argument('--path_idx', type=int, default=0, help='from which path')
 parser.add_argument('--N', type=int, default=1)
