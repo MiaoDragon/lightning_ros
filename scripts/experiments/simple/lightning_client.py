@@ -98,10 +98,6 @@ def plan(args):
                     data_length += np.linalg.norm(paths[i][j][k+1]-paths[i][j][k])
                 length_msg = Float64(data_length * ratio)
                 # call lightning service
-                print('waiting for lightning service...')
-                rospy.wait_for_service(LIGHTNING_SERVICE)
-                print('acquired lightning service')
-                lightning = rospy.ServiceProxy(LIGHTNING_SERVICE, GetMotionPlan)
                 request = GetMotionPlanRequest()
                 request.motion_plan_request.group_name = 'base'
                 for k in range(len(paths[i][j][0])):
@@ -123,8 +119,12 @@ def plan(args):
                         obs_pub.publish(obs_msg)
                         length_pub.publish(length_msg)
                 pub_thread = threading.Thread(target=publisher, args=())
-
                 pub_thread.start()
+                
+                print('waiting for lightning service...')
+                rospy.wait_for_service(LIGHTNING_SERVICE)
+                print('acquired lightning service')
+                lightning = rospy.ServiceProxy(LIGHTNING_SERVICE, GetMotionPlan)
                 try:
                     respond = lightning(request)
                 except:
@@ -144,7 +144,7 @@ def plan(args):
         print('average test time up to now: %f' % (np.mean(time_total)))
         fes_env.append(fes_path)
         valid_env.append(valid_path)
-        print('accuracy up to now: %f' % (np.sum(np.array(fes_env)) / np.sum(np.array(valid_env))))
+        print('accuracy up to now: %f' % (float(np.sum(np.array(fes_env))) / np.sum(np.array(valid_env))))
     pickle.dump(time_env, open(args.res_path+'time.p', "wb" ))
     f = open(os.path.join(args.res_path,'accuracy.txt'), 'w')
     valid_env = np.array(valid_env).flatten()
