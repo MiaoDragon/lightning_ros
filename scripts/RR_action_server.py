@@ -236,18 +236,6 @@ class RRNode:
 
           Args:
             index (int): The index to pass to _set_repaired_section(),
-              corresponding to which o
-
-    def _repair_thread(self, index, start, goal, start_index, goal_index, planning_time):
-        """
-          Handles repairing a portion of the path.
-          All that this function really does is to plan from scratch between
-            the start and goal configurations and then store the planned path
-            in the appropriate places and draws either the repaired path or, if
-            the repair fails, the start and goal.
-
-          Args:
-            index (int): The index to pass to _set_repaired_section(),
               corresponding to which of the invalid sections of the path we are
               repairing.
             start (list of float): The start joint configuration to use.
