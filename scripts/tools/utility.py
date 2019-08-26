@@ -35,9 +35,9 @@ def save_info(loss, planner_type, plan_time, fname):
     torch.save(states, fname)
 
 def load_net_state(net, fname):
-    checkpoint = torch.load(fname)
     try:
         with FileLock(fname):
+            checkpoint = torch.load(fname)
             net.load_state_dict(checkpoint['state_dict'])
     except:
         pass
