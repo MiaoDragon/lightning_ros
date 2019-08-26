@@ -1,6 +1,8 @@
+import sys
+sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
 import torch
 import numpy as np
-from .. .. tools.utility import *
+from tools.utility import *
 import time
 DEFAULT_STEP = 2.
 def removeCollision(path, obc, IsInCollision):

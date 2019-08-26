@@ -41,7 +41,8 @@ This file contains several wrapper classes for planning paths, performing
 None of these classes really perform actualy work but rather are just calling
   ROS services.
 """
-
+import sys
+sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
 import roslib
 import rospy
 
@@ -54,7 +55,7 @@ from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest, GetStateValidit
 from moveit_msgs.msg import JointConstraint, Constraints
 from std_msgs.msg import UInt8
 import utility
-from .. architecture.GEM_end2end_model import End2EndMPNet
+from architecture.GEM_end2end_model import End2EndMPNet
 import torch
 import numpy as np
 import time

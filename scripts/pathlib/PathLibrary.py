@@ -39,8 +39,8 @@ import roslib
 import rospy
 import actionlib
 
-import .. tools.NeuralPathTools
-import .. tools.NeuralOMPLPathTools
+import tools.NeuralPathTools
+import tools.NeuralOMPLPathTools
 import math
 import string
 import random

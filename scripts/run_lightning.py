@@ -45,7 +45,8 @@ This node also performs some post-processing on the RR retrieved paths to
 smooth out the path. This post-processing is not strictly necessary; all it
 does is shortcut between random pairs of points.
 """
-
+import sys
+sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
 import roslib
 #roslib.load_manifest("lightning");
 import rospy

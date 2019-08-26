@@ -45,7 +45,8 @@ node; just a python library that it calls), and the PathTools python library
 which calls the collision_checker service and advertises a topic for displaying
 stuff in RViz.
 """
-
+import sys
+sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
 import roslib
 import rospy
 import actionlib
