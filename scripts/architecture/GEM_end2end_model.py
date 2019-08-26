@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import torch.nn as nn
 import torch
 from gem_utility import *
