@@ -128,7 +128,15 @@ def plan(args):
                 pub_thread.start()
 
                 print('waiting for lightning service...')
-                rospy.wait_for_service(LIGHTNING_SERVICE)
+                try:
+                    # to make sure when we CTRL+C we can exit
+                    rospy.wait_for_service(LIGHTNING_SERVICE)
+                except:
+                    exception = True
+                    pub_thread.join()
+                    # exit because there is error
+                    print('exception occurred when waiting for lightning service...')
+                    raise
                 print('acquired lightning service')
                 lightning = rospy.ServiceProxy(LIGHTNING_SERVICE, GetMotionPlan)
                 try:

@@ -211,7 +211,8 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
         obc = [obc_i.values for obc_i in obc.points]
-        obc = np.array(obc)
+        obc = torch.FloatTensor(obc)
+        #obc = np.array(obc)
         rospy.loginfo("%s Plan Trajectory Wrapper: obstacle message received." % (rospy.get_name()))
         # obtain path length through rostopic
         rospy.loginfo("%s Plan Trajectory Wrapper: waiting for planning path length message..." % (rospy.get_name()))
