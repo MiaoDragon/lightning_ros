@@ -43,7 +43,11 @@ def load_net_state(net, fname):
         pass
 
 def load_opt_state(net, fname):
-    checkpoint = torch.load(fname)
+    try:
+        with FileLock(fname):
+            checkpoint = torch.load(fname)
+    except:
+        pass
     net.opt.load_state_dict(checkpoint['optimizer'])
 
 def load_seed(fname):
@@ -88,12 +92,7 @@ def create_and_load_model(ModelConstr, fname, device):
     model = create_model(ModelConstr, device)
     if os.path.isfile(fname):
         try:
-            print('acquiring filelock...')
-            with FileLock(fname):
-                print('filelock acquired.')
-                # previous trained model exists, load model
-                load_net_state(model, fname)
-            print('filelock returned.')
+            load_net_state(model, fname)
         except:
             pass
     # make sure the new loaded weights are transformed as well
@@ -105,8 +104,7 @@ def create_and_load_model(ModelConstr, fname, device):
     # load optimizer if there exists previous one
     if os.path.isfile(fname):
         try:
-            with FileLock(fname):
-                load_opt_state(model, fname)
+            load_opt_state(model, fname)
         except:
             pass
     return model
