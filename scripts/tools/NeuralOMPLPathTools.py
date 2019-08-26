@@ -53,7 +53,7 @@ from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, P
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest
 from moveit_msgs.msg import JointConstraint, Constraints
 from std_msgs.msg import Float64, UInt8
-from . import NeuralPathTools
+import NeuralPathTools
 from .. architecture.GEM_end2end_model import End2EndMPNet
 from ompl import base as ob
 from ompl import geometric as og

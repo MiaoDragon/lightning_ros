@@ -61,8 +61,8 @@ from std_msgs.msg import Float32, UInt8
 from trajectory_msgs.msg import JointTrajectoryPoint
 from tools import NeuralOMPLPathTools, NeuralPathTools
 from tools import utility
-from . experiments.simple import plan_general
-from . architecture.GEM_end2end_model import End2EndMPNet
+from experiments.simple import plan_general
+from architecture.GEM_end2end_model import End2EndMPNet
 
 import numpy as np
 import torch

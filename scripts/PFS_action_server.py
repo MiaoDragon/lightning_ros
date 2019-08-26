@@ -52,8 +52,8 @@ import threading
 from lightning.msg import PFSAction, PFSResult
 from lightning.msg import StopPlanning, Float64Array
 from lightning.msg import PlannerType
-from . tools import NeuralPathTools
-from . tools import NeuralOMPLPathTools
+from tools import NeuralPathTools
+from tools import NeuralOMPLPathTools
 import time
 import numpy as np
 # The name of this node.
