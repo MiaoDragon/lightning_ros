@@ -88,9 +88,12 @@ def create_and_load_model(ModelConstr, fname, device):
     model = create_model(ModelConstr, device)
     if os.path.isfile(fname):
         try:
+            print('acquiring filelock...')
             with FileLock(fname):
+                print('filelock acquired.')
                 # previous trained model exists, load model
                 load_net_state(model, fname)
+            print('filelock returned.')
         except:
             pass
     # make sure the new loaded weights are transformed as well
