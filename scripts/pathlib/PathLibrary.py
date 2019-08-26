@@ -154,10 +154,10 @@ class PathLibrary:
         return current_max
 
     def _load_trees(self):
-        tree_load_file = open(self._get_full_filename(PATH_TREE_NAME), 'r');
+        tree_load_file = open(self._get_full_filename(PATH_TREE_NAME), 'rb');
         self.node_size, self.tree = pickle.load(tree_load_file);
         tree_load_file.close();
-        sg_tree_load_file = open(self._get_full_filename(SG_TREE_NAME), 'r');
+        sg_tree_load_file = open(self._get_full_filename(SG_TREE_NAME), 'rb');
         self.sg_node_size, self.sg_tree = pickle.load(sg_tree_load_file);
         sg_tree_load_file.close();
 
