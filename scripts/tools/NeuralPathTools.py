@@ -134,7 +134,7 @@ class PlanTrajectoryWrapper:
         #self.neural_planners = ['%s_neural_planner_node0/mpnet' % (node_type)]
         device = torch.device(device_name)
         if device_name != 'cpu':
-            torch.cuda.set_device(device)
+            torch.cuda.set_device((int(device_name.split(':')[1])))
         self.device = device
         self.neural_planners = [utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)]
         rospy.loginfo('%s Initializing planner for MPNet...' % (rospy.get_name()))

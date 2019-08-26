@@ -148,7 +148,7 @@ class Lightning:
         device = torch.device(device_name)
         self.device = device
         if device_name != 'cpu':
-            torch.cuda.set_device(device)
+            torch.cuda.set_device(int(device_name.split(':')[1]))
         self.model = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)
         self.retrieved_and_final_path = [None, None, None, None]
         # record current planning path
