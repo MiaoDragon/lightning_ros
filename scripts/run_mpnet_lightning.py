@@ -58,11 +58,11 @@ from lightning.msg import RRAction, RRGoal, PFSAction, PFSGoal, Float64Array, St
 from lightning.srv import ManagePathLibrary, ManagePathLibraryRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanResponse
 from std_msgs.msg import Float32
-from . tools import NeuralPathTools
-from . tools import NeuralOMPLPathTools
+from tools import NeuralPathTools
+from tools import NeuralOMPLPathTools
 from trajectory_msgs.msg import JointTrajectoryPoint
 
-from . architecture.GEM_end2end_model import End2EndMPNet
+from architecture.GEM_end2end_model import End2EndMPNet
 
 # Node names for RR and PFS plan retrieval.
 RR_NODE_NAME = "rr_node"
