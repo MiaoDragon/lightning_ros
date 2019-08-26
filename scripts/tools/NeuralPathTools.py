@@ -41,8 +41,9 @@ This file contains several wrapper classes for planning paths, performing
 None of these classes really perform actualy work but rather are just calling
   ROS services.
 """
-import sys
+import sys, os
 sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import roslib
 import rospy
 

@@ -34,7 +34,9 @@ of its
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 """
-
+import sys, os
+sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import roslib
 import rospy
 import actionlib

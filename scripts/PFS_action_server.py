@@ -43,8 +43,9 @@ planner is run is specified in planners.launch). This is essentially a thin
 wrapper over the planner_stoppable type node, which is itself a thin wrapper
 over OMPL.
 """
-import sys
+import sys, os
 sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import roslib
 import rospy
 import actionlib
