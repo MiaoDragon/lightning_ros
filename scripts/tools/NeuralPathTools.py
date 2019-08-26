@@ -255,7 +255,7 @@ class PlanTrajectoryWrapper:
             plan_time = time.time()
             response = planner_client(req)
             plan_time = time.time() - plan_time
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             rospy.loginfo("%s Plan Trajectory Wrapper: service call failed: %s"
             % (rospy.get_name(), e))
             return plan_time, None
@@ -473,4 +473,4 @@ if __name__ == "__main__":
     if len(sys.argv) == 8:
         isw = InvalidSectionWrapper()
         path = [float(sys.argv[i]) for i in xrange(1, len(sys.argv))]
-        print isw.get_invalid_sections_for_path([path])
+        print(isw.get_invalid_sections_for_path([path]))
