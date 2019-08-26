@@ -41,7 +41,7 @@ def load_net_state(net, fname):
             net.load_state_dict(checkpoint['state_dict'])
     except:
         pass
-        
+
 def load_opt_state(net, fname):
     checkpoint = torch.load(fname)
     net.opt.load_state_dict(checkpoint['optimizer'])
@@ -87,8 +87,12 @@ def create_and_load_model(ModelConstr, fname, device):
     rospy.loginfo('Creating and loading model...')
     model = create_model(ModelConstr, device)
     if os.path.isfile(fname):
-        # previous trained model exists, load model
-        load_net_state(model, fname)
+        try:
+            with FileLock(fname):
+                # previous trained model exists, load model
+                load_net_state(model, fname)
+        except:
+            pass
     # make sure the new loaded weights are transformed as well
     model.to(device=device)
     # create optimizer
@@ -97,7 +101,11 @@ def create_and_load_model(ModelConstr, fname, device):
     create_optimizer(model)
     # load optimizer if there exists previous one
     if os.path.isfile(fname):
-        load_opt_state(model, fname)
+        try:
+            with FileLock(fname):
+                load_opt_state(model, fname)
+        except:
+            pass
     return model
 
 def get_normalizer():
