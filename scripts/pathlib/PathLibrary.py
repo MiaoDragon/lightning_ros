@@ -144,7 +144,7 @@ class PathLibrary:
 
     def _get_max_path_id(self, filename):
         f = open(self._get_full_filename(filename), 'r')
-        num_sgs = int(f.next().strip())
+        num_sgs = int(f.readline().strip())
         current_max = 0
         for line in f:
             pid = int(line.strip().split(" ")[0])
@@ -183,8 +183,8 @@ class PathLibrary:
 
     def _get_robot_name_and_joints(self, lib_name):
         f = open(self._get_full_filename(INFO_FILE_NAME, lib_name), 'r')
-        robot_name = f.next().strip()
-        joint_names = f.next().strip().split('|')
+        robot_name = f.readline().strip()
+        joint_names = f.readline().strip().split('|')
         return (robot_name, joint_names)
 
     def _find_library(self, robot_name, joint_names):
@@ -456,7 +456,7 @@ class PathLibrary:
 
     def _get_old_paths(self, filename):
         f = open(filename, 'r');
-        num_paths = int(f.next().strip());
+        num_paths = int(f.readline().strip());
         paths = [];
         for line in f:
             pid_string, path_string, planner_type = line.strip().split(" ")
@@ -519,13 +519,13 @@ class PathLibrary:
 
     def _read_num_paths_from_file(self, filename):
         f = open(self._get_full_filename(filename), 'r');
-        ret = int(f.next().strip());
+        ret = int(f.readline().strip());
         f.close();
         return ret;
 
     def _read_num_sgs_from_file(self, filename):
         f = open(self._get_full_filename(filename), 'r');
-        ret = int(f.next().strip());
+        ret = int(f.readline().strip());
         f.close();
         return ret;
 
@@ -569,14 +569,14 @@ class PathLibrary:
     # precondition: increased path count is less than or equal to self.node_size
     def _change_path_count_in_file(self, filename, amt):
         f = open(self._get_full_filename(filename), 'r+');
-        newVal = int(f.next().strip()) + amt;
+        newVal = int(f.readline().strip()) + amt;
         f.seek(0);
         f.write(string.zfill(str(newVal), len(str(self.node_size))));
         f.close();
 
     def _read_paths_from_file(self, filename):
         f = open(self._get_full_filename(filename), 'r')
-        num_paths = int(f.next().strip())
+        num_paths = int(f.readline().strip())
         paths = []
         for line in f:
             pid_string, path_string, planner_type = line.strip().split(" ")
@@ -668,7 +668,7 @@ class PathLibrary:
 
     def _change_sg_count_in_file(self, sg_node_name, amt):
         f = open(self._get_full_filename(sg_node_name), 'r+');
-        newVal = int(f.next().strip()) + amt;
+        newVal = int(f.readline().strip()) + amt;
         f.seek(0);
         f.write(string.zfill(str(newVal), len(str(self.sg_node_size))));
         f.close();
@@ -676,7 +676,7 @@ class PathLibrary:
     #return a dictionary of node name to start goals for node
     def _read_sgs_from_file(self, sg_node_name):
         f = open(self._get_full_filename(sg_node_name), 'r')
-        num_sgs = int(f.next().strip())
+        num_sgs = int(f.readline().strip())
         start_goals = dict()
         for line in f:
             pid_string, node_name, sg_string = line.strip().split(" ")
