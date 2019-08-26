@@ -75,7 +75,7 @@ def plan(args):
     obs_pub = rospy.Publisher('lightning/obstacles/obs', Float64Array, queue_size=10)
     length_pub = rospy.Publisher('lightning/planning/path_length_threshold', Float64, queue_size=10)
 
-    for i in range(len(paths)):
+    for i in xrange(len(paths)):
         time_path = []
         fes_path = []   # 1 for feasible, 0 for not feasible
         valid_path = []      # if the feasibility is valid or not
@@ -85,7 +85,7 @@ def plan(args):
         # publishing to ROS topic
         obc_msg = Float64Array2D([Float64Array(obci) for obci in obc])
         obs_msg = Float64Array(obs[i])
-        for j in range(len(paths[0])):
+        for j in xrange(len(paths[0])):
             if path_lengths[i][j] == 0:
                 continue
             fp = 0 # indicator for feasibility
@@ -98,18 +98,18 @@ def plan(args):
                 valid_path.append(1)
                 # obtaining the length threshold for planning
                 data_length = 0.
-                for k in range(path_lengths[i][j]-1):
+                for k in xrange(path_lengths[i][j]-1):
                     data_length += np.linalg.norm(paths[i][j][k+1]-paths[i][j][k])
                 length_msg = Float64(data_length * ratio)
                 # call lightning service
                 request = GetMotionPlanRequest()
                 request.motion_plan_request.group_name = 'base'
-                for k in range(len(paths[i][j][0])):
+                for k in xrange(len(paths[i][j][0])):
                     request.motion_plan_request.start_state.joint_state.name.append('%d' % (k))
                     request.motion_plan_request.start_state.joint_state.position.append(paths[i][j][0][k])
 
                 request.motion_plan_request.goal_constraints.append(Constraints())
-                for k in range(len(paths[i][j][0])):
+                for k in xrange(len(paths[i][j][0])):
                     request.motion_plan_request.goal_constraints[0].joint_constraints.append(JointConstraint())
                     request.motion_plan_request.goal_constraints[0].joint_constraints[k].position = paths[i][j][path_lengths[i][j]-1][k]
                 request.motion_plan_request.allowed_planning_time = time_limit

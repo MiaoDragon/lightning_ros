@@ -92,7 +92,7 @@ def stateValidate(robot_state, group_name, constraints=None, print_depth=False):
 
     if (not result.valid):
         contact_depths = []
-        for i in range(len(result.contacts)):
+        for i in xrange(len(result.contacts)):
             contact_depths.append(result.contacts[i].depth)
 
         max_depth = max(contact_depths)
@@ -122,9 +122,9 @@ class PlanTrajectoryWrapper:
             num_planners (int): The number of planner nodes that are being used.
         """
         # depending on argument, choose to use either OMPL direct planning or MoveIt
-        self.planners = ["%s_planner_node%i/%s" % (node_type, i, PLANNER_NAME) for i in range(num_planners)]
+        self.planners = ["%s_planner_node%i/%s" % (node_type, i, PLANNER_NAME) for i in xrange(num_planners)]
         rospy.loginfo("Initializaing %i planners for %s" % (num_planners, node_type))
-        self.planners_available = [True for i in range(num_planners)]
+        self.planners_available = [True for i in xrange(num_planners)]
         self.planner_lock = threading.Lock()
         self.released_event = threading.Event()
         self.released_event.set()
@@ -244,7 +244,7 @@ class PlanTrajectoryWrapper:
 
         req.motion_plan_request.goal_constraints.append(Constraints())
         req.motion_plan_request.goal_constraints[0].joint_constraints = []
-        for i in range(len(joint_names)):
+        for i in xrange(len(joint_names)):
             temp_constraint = JointConstraint()
             temp_constraint.joint_name = joint_names[i]
             temp_constraint.position = goal_point[i]
@@ -260,7 +260,7 @@ class PlanTrajectoryWrapper:
             plan_time = time.time()
             response = planner_client(req)
             plan_time = time.time() - plan_time
-        except rospy.ServiceException as e:
+        except rospy.ServiceException, e:
             rospy.loginfo("%s Plan Trajectory Wrapper: service call failed: %s"
             % (rospy.get_name(), e))
             return plan_time, None
@@ -309,7 +309,7 @@ class PlanTrajectoryWrapper:
             return not stateValidate(state, group_name, constraints=None, print_depth=False)
         fp = 0
         plan_time = time.time()
-        for t in range(MAX_NEURAL_REPLAN):
+        for t in xrange(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
                 step_sz = 1.2
@@ -477,5 +477,10 @@ class DrawPointsWrapper:
 if __name__ == "__main__":
     if len(sys.argv) == 8:
         isw = InvalidSectionWrapper()
-        path = [float(sys.argv[i]) for i in range(1, len(sys.argv))]
+<<<<<<< HEAD
+        path = [float(sys.argv[i]) for i in xrange(1, len(sys.argv))]
         print(isw.get_invalid_sections_for_path([path]))
+=======
+        path = [float(sys.argv[i]) for i in xxrange(1, len(sys.argv))]
+        print isw.get_invalid_sections_for_path([path])
+>>>>>>> parent of 2c7c427... change to python3 syntax

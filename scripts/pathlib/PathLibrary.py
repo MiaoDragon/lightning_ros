@@ -101,7 +101,7 @@ class PathLibrary:
             # Make sure that the moveit server is ready before starting up
             InvalidSectionWrapper = tools.NeuralPathTools.InvalidSectionWrapper
         self.invalid_section_wrapper = InvalidSectionWrapper()
-        self.split_paths_function = self._largest_range_split #self._consecutive_split
+        self.split_paths_function = self._largest_xrange_split #self._consecutive_split
 
         self._init_lib_vars()
 
@@ -144,7 +144,7 @@ class PathLibrary:
 
     def _get_max_path_id(self, filename):
         f = open(self._get_full_filename(filename), 'r')
-        num_sgs = int(f.readline().strip())
+        num_sgs = int(f.next().strip())
         current_max = 0
         for line in f:
             pid = int(line.strip().split(" ")[0])
@@ -183,8 +183,8 @@ class PathLibrary:
 
     def _get_robot_name_and_joints(self, lib_name):
         f = open(self._get_full_filename(INFO_FILE_NAME, lib_name), 'r')
-        robot_name = f.readline().strip()
-        joint_names = f.readline().strip().split('|')
+        robot_name = f.next().strip()
+        joint_names = f.next().strip().split('|')
         return (robot_name, joint_names)
 
     def _find_library(self, robot_name, joint_names):
@@ -336,9 +336,9 @@ class PathLibrary:
         dist = self._line_dist(p1, p2)
         if dist > self.step_size:
             path_fraction = float(self.step_size) / dist
-            diffs = [self._angle_between(p1[i], p2[i]) for i in range(self.current_num_dims)]
-            for step in [path_fraction*i for i in range(1, int(math.ceil(1/path_fraction)))]:
-                middle.append([p1[j]+step*diffs[j]*self._get_direction_multiplier(p1[j], p2[j]) for j in range(self.current_num_dims)])
+            diffs = [self._angle_between(p1[i], p2[i]) for i in xrange(self.current_num_dims)]
+            for step in [path_fraction*i for i in xrange(1, int(math.ceil(1/path_fraction)))]:
+                middle.append([p1[j]+step*diffs[j]*self._get_direction_multiplier(p1[j], p2[j]) for j in xrange(self.current_num_dims)])
         return middle
 
     #get the direction to go around the circle to get from angle a to b
@@ -362,10 +362,10 @@ class PathLibrary:
         counter = 0;
         nodes = [];
         current_node = self.tree;
-        counts = ([0 for i in range(self.current_num_dims)], [0 for i in range(self.current_num_dims)]);
+        counts = ([0 for i in xrange(self.current_num_dims)], [0 for i in xrange(self.current_num_dims)]);
         directions = self._get_path_directions(path_leaf_node.name);
         #get the nodes that need to be checked by taking the opposite directions of the leaf
-        for i in range(len(directions)):
+        for i in xrange(len(directions)):
             counts = self._update_counts(counts, current_node, target_sg);
             if directions[i] == 'r':
                 nodes.append((counts, current_node.left));
@@ -394,16 +394,16 @@ class PathLibrary:
         short_dirs, long_dirs = sorted([self._get_path_directions(name) for name in [node_name, target_node_name]], key=(lambda x: len(x)))
         begin_index = (len(short_dirs)/(2*self.current_num_dims))*(2*self.current_num_dims)
         end_start_index = min([begin_index+self.current_num_dims, len(short_dirs)])
-        start_counter = sum([counts[START][i % self.current_num_dims] for i in range(begin_index, end_start_index) if short_dirs[i] != long_dirs[i]])
-        goal_counter = sum([counts[GOAL][i % self.current_num_dims] for i in range(end_start_index, len(short_dirs)) if short_dirs[i] != long_dirs[i]])
+        start_counter = sum([counts[START][i % self.current_num_dims] for i in xrange(begin_index, end_start_index) if short_dirs[i] != long_dirs[i]])
+        goal_counter = sum([counts[GOAL][i % self.current_num_dims] for i in xrange(end_start_index, len(short_dirs)) if short_dirs[i] != long_dirs[i]])
         return start_counter**0.5 + goal_counter**0.5 >= max_dist
 
     def _update_counts(self, counts, node, target_sg):
         #if updating the first dimension, then need to start over
         if node.split_state == START and node.split_index == 0:
-            start_ret = [0 for i in range(self.current_num_dims)]
+            start_ret = [0 for i in xrange(self.current_num_dims)]
             start_ret[0] = self._angle_between(node.split_value, target_sg[START][0])**2
-            goal_ret = [0 for i in range(self.current_num_dims)]
+            goal_ret = [0 for i in xrange(self.current_num_dims)]
             return (start_ret, goal_ret)
         else:
             new_count = (list(counts[START]), list(counts[GOAL]))
@@ -440,7 +440,7 @@ class PathLibrary:
     #add each path in all_paths to the correct node; used for reorganizing nodes
     def _store_multiple_paths(self, all_paths):
         all_paths = [(pid, self._normalize_path(p), planner_type) for pid, p, planner_type in all_paths];
-        for i in range((len(all_paths)/self.node_size)+1):
+        for i in xrange((len(all_paths)/self.node_size)+1):
             path_dict = dict(); #mapping from node name to list of paths to store at that node
             planner_type_dict = dict();
             for path_with_id in all_paths[self.node_size*i:self.node_size*(i+1)]:
@@ -456,7 +456,7 @@ class PathLibrary:
 
     def _get_old_paths(self, filename):
         f = open(filename, 'r');
-        num_paths = int(f.readline().strip());
+        num_paths = int(f.next().strip());
         paths = [];
         for line in f:
             pid_string, path_string, planner_type = line.strip().split(" ")
@@ -481,18 +481,18 @@ class PathLibrary:
         return self._do_path_split(tree_node, paths);
 
     #sets split index and split value of tree_node, returns sorted list of paths
-    #splits by largest range along an index
-    def _largest_range_split(self, tree_node):
+    #splits by largest xrange along an index
+    def _largest_xrange_split(self, tree_node):
         paths = self._get_paths(tree_node.name);
-        max_range = (None, float('-inf')); #tuple of (tuple indicating split index, range on that index)
+        max_xrange = (None, float('-inf')); #tuple of (tuple indicating split index, xrange on that index)
         for state in [START, GOAL]:
-            for index in range(self.current_num_dims):
+            for index in xrange(self.current_num_dims):
                 sort_key = lambda pid, p, planner_type: p[state][index];
-                temp_range = self._angle_between(sort_key(max(paths, key=sort_key)), sort_key(min(paths, key=sort_key)));
-                if temp_range > max_range[1]:
-                    max_range = ((state, index), temp_range);
-        tree_node.split_state = max_range[0][0];
-        tree_node.split_index = max_range[0][1];
+                temp_xrange = self._angle_between(sort_key(max(paths, key=sort_key)), sort_key(min(paths, key=sort_key)));
+                if temp_xrange > max_xrange[1]:
+                    max_xrange = ((state, index), temp_xrange);
+        tree_node.split_state = max_xrange[0][0];
+        tree_node.split_index = max_xrange[0][1];
         return self._do_path_split(tree_node, paths);
 
     #sets split value for the tree_node and returns the split paths
@@ -519,13 +519,13 @@ class PathLibrary:
 
     def _read_num_paths_from_file(self, filename):
         f = open(self._get_full_filename(filename), 'r');
-        ret = int(f.readline().strip());
+        ret = int(f.next().strip());
         f.close();
         return ret;
 
     def _read_num_sgs_from_file(self, filename):
         f = open(self._get_full_filename(filename), 'r');
-        ret = int(f.readline().strip());
+        ret = int(f.next().strip());
         f.close();
         return ret;
 
@@ -569,14 +569,14 @@ class PathLibrary:
     # precondition: increased path count is less than or equal to self.node_size
     def _change_path_count_in_file(self, filename, amt):
         f = open(self._get_full_filename(filename), 'r+');
-        newVal = int(f.readline().strip()) + amt;
+        newVal = int(f.next().strip()) + amt;
         f.seek(0);
         f.write(string.zfill(str(newVal), len(str(self.node_size))));
         f.close();
 
     def _read_paths_from_file(self, filename):
         f = open(self._get_full_filename(filename), 'r')
-        num_paths = int(f.readline().strip())
+        num_paths = int(f.next().strip())
         paths = []
         for line in f:
             pid_string, path_string, planner_type = line.strip().split(" ")
@@ -590,7 +590,7 @@ class PathLibrary:
     def _write_paths_to_file(self, filename, path_list, planner_types):
         f = open(self._get_full_filename(filename), 'a');
         paths_with_ids = []
-        for i in range(len(path_list)):
+        for i in xrange(len(path_list)):
             p = path_list[i]
             planner_type = planner_types[i]
             f.write("%i %s %i\n" % (self.next_path_id, self._path_to_string(p), planner_type));
@@ -668,7 +668,7 @@ class PathLibrary:
 
     def _change_sg_count_in_file(self, sg_node_name, amt):
         f = open(self._get_full_filename(sg_node_name), 'r+');
-        newVal = int(f.readline().strip()) + amt;
+        newVal = int(f.next().strip()) + amt;
         f.seek(0);
         f.write(string.zfill(str(newVal), len(str(self.sg_node_size))));
         f.close();
@@ -676,7 +676,7 @@ class PathLibrary:
     #return a dictionary of node name to start goals for node
     def _read_sgs_from_file(self, sg_node_name):
         f = open(self._get_full_filename(sg_node_name), 'r')
-        num_sgs = int(f.readline().strip())
+        num_sgs = int(f.next().strip())
         start_goals = dict()
         for line in f:
             pid_string, node_name, sg_string = line.strip().split(" ")
@@ -797,22 +797,22 @@ class PathLibrary:
 
     def _calc_dtw_distance(self, path1, path2):
         n, m = len(path1), len(path2);
-        table = [[0 for i in range(m+1)] for j in range(n+1)];
-        for i in range(1, n+1):
+        table = [[0 for i in xrange(m+1)] for j in xrange(n+1)];
+        for i in xrange(1, n+1):
             table[i][0] = float('inf');
-        for i in range(1, m+1):
+        for i in xrange(1, m+1):
             table[0][i] = float('inf');
         table[0][0] = 0;
 
-        for i in range(n):
-            for j in range(m):
+        for i in xrange(n):
+            for j in xrange(m):
                 cost = self._line_dist(path1[i], path2[j]);
                 table[i+1][j+1] = cost + min(table[i][j+1], table[i+1][j], table[i][j]);
 
         return table[n][m];
 
     def _line_dist(self, p1, p2):
-        return (sum([(self._angle_between(p1[i], p2[i]))**2 for i in range(len(p1))]))**0.5;
+        return (sum([(self._angle_between(p1[i], p2[i]))**2 for i in xrange(len(p1))]))**0.5;
 
     def _proj_dist(self, sg1, sg2):
         return self._line_dist(sg1[START], sg2[START]) + self._line_dist(sg1[GOAL], sg2[GOAL]);
@@ -856,7 +856,7 @@ class PathLibrary:
 
     def check_accuracy(self, num_iters, n):
         RIGHT_ARM_JOINT_LIMITS = [(-1*math.pi/4-1.35, -1*math.pi/4+1.35), (-0.3536, 1.2963), (-1.55-2.2, -1.55+2.2), (-2.1213, -0.15), (-1*math.pi, math.pi), (-2.0, -0.1), (-1*math.pi, math.pi)];
-        for i in range(num_iters):
+        for i in xrange(num_iters):
             start = [(pt[1]-pt[0])*random.random()+pt[0] for pt in RIGHT_ARM_JOINT_LIMITS];
             goal = [(pt[1]-pt[0])*random.random()+pt[0] for pt in RIGHT_ARM_JOINT_LIMITS];
             retrieved = self._retrieve_path_simple(start, goal, n);
@@ -911,7 +911,7 @@ class PathLibrary:
                             print("Path library: path (in %s) is %s" % (f, ' '.join([str(x) for x in path[index]])))
                             return path[index]
                         else:
-                            print("Index is out of range of path (in %s), path is %i points long" % (f, len(path)))
+                            print("Index is out of xrange of path (in %s), path is %i points long" % (f, len(path)))
                             return None
 
 if __name__ == "__main__":
@@ -922,13 +922,13 @@ if __name__ == "__main__":
     else:
         test_joints = ['a', 'b']
         p = PathLibrary(STEP_SIZE, node_size=2, sg_node_size=8)
-        for i in range(3):
+        for i in xrange(3):
             p.store_path([[random.random()*12,1],[1,2],[2,3]], "pr2", test_joints)
         p.delete_path_by_id(1, "pr2", test_joints)
-        for i in range(3):
+        for i in xrange(3):
             p.store_path([[random.random()*12,1],[1,2],[2,3]], "pr3", test_joints)
         p.delete_path_by_id(1, "pr3", test_joints)
-        for i in range(3):
+        for i in xrange(3):
             p.store_path([[random.random()*12,1],[1,2],[2,3]], "pr2", test_joints)
         p.delete_path_by_id(3, "pr2", test_joints)
         p.retrieve_path([], [], 0, "blah", "apple", ['a'])

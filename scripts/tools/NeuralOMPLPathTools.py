@@ -227,10 +227,10 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         start = ob.State(self.space)
         # we can pick a random start state...
         # ... or set specific values
-        for k in range(len(start_point)):
+        for k in xrange(len(start_point)):
             start[k] = start_point[k]
         goal = ob.State(self.space)
-        for k in range(len(goal_point)):
+        for k in xrange(len(goal_point)):
             goal[k] = goal_point[k]
         def isStateValid(state):
             return not IsInCollision(state, obc)
@@ -252,7 +252,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
             solutions = np.zeros((len(ompl_path),2))
-            for k in range(len(ompl_path)):
+            for k in xrange(len(ompl_path)):
                 solutions[k][0] = float(ompl_path[k][0])
                 solutions[k][1] = float(ompl_path[k][1])
             return plan_time, solutions.tolist()
@@ -300,7 +300,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         time_flag = False
         fp = 0
         plan_time = time.time()
-        for t in range(MAX_NEURAL_REPLAN):
+        for t in xrange(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
                 step_sz = 1.2
@@ -453,7 +453,7 @@ class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
             start_i = 0
             end_i = 0
             mode = True # valid till now
-            for point_i in range(len(orig_path)):
+            for point_i in xrange(len(orig_path)):
                 point = orig_path[point_i]
                 if self.IsInCollision(point, obc):
                     mode = False
@@ -476,5 +476,10 @@ class DrawPointsWrapper(NeuralPathTools.DrawPointsWrapper):
 if __name__ == "__main__":
     if len(sys.argv) == 8:
         isw = InvalidSectionWrapper()
-        path = [float(sys.argv[i]) for i in range(1, len(sys.argv))]
+<<<<<<< HEAD
+        path = [float(sys.argv[i]) for i in xrange(1, len(sys.argv))]
         print(isw.get_invalid_sections_for_path([path]))
+=======
+        path = [float(sys.argv[i]) for i in xxrange(1, len(sys.argv))]
+        print isw.get_invalid_sections_for_path([path])
+>>>>>>> parent of 2c7c427... change to python3 syntax

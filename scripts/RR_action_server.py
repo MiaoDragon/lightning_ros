@@ -389,7 +389,7 @@ class RRNode:
             repaired_planner_type: the planner_type used to repair. (if no need to repair, don't care)
             path: The repaired path.
         """
-        zeros_tuple = tuple([0 for i in range(len(self.current_joint_names))])
+        zeros_tuple = tuple([0 for i in xrange(len(self.current_joint_names))])
         rospy.loginfo("RR action server: got path with %d points" % len(original_path))
 
         if invalid_sections is None:
@@ -407,7 +407,7 @@ class RRNode:
             if use_parallel_repairing:
                 #multi-threaded repairing
                 ## TODO: consider how to adapt here for neural network
-                self.repaired_sections = [None for i in range(len(invalid_sections))]
+                self.repaired_sections = [None for i in xrange(len(invalid_sections))]
                 #each thread replans an invalid section
                 threadList = []
                 for i, sec in enumerate(invalid_sections):
@@ -424,7 +424,7 @@ class RRNode:
                         return None, None
                 #replace invalid sections with replanned sections
                 new_path = original_path[0:invalid_sections[0][0]]
-                for i in range(len(invalid_sections)):
+                for i in xrange(len(invalid_sections)):
                     new_path += self.repaired_sections[i]
                     if i+1 < len(invalid_sections):
                         new_path += original_path[invalid_sections[i][1]+1:invalid_sections[i+1][0]]
@@ -436,7 +436,7 @@ class RRNode:
                 new_path = original_path[0:invalid_sections[0][0]]
                 # if at least one classical planner, then set to classical planner
                 repaired_planner_type = PlannerType.NEURAL
-                for i in range(len(invalid_sections)):
+                for i in xrange(len(invalid_sections)):
                     if not self._need_to_stop():
                         #start_invalid and end_invalid must correspond to valid states when passed to the planner
                         start_invalid, end_invalid = invalid_sections[i]
