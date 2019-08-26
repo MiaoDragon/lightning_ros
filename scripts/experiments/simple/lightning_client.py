@@ -115,12 +115,14 @@ def plan(args):
                 def publisher():
                     global responded, exception
                     while not responded and not exception:
+                        print('sending obstacle message...')
                         obc_pub.publish(obc_msg)
                         obs_pub.publish(obs_msg)
                         length_pub.publish(length_msg)
+                        rospy.sleep(0.5)
                 pub_thread = threading.Thread(target=publisher, args=())
                 pub_thread.start()
-                
+
                 print('waiting for lightning service...')
                 rospy.wait_for_service(LIGHTNING_SERVICE)
                 print('acquired lightning service')
