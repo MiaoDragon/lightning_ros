@@ -53,8 +53,8 @@ from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, P
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest, GetStateValidity, GetStateValidityRequest, GetStateValidityResponse
 from moveit_msgs.msg import JointConstraint, Constraints
 from std_msgs.msg import UInt8
-import utility
-from architecture.GEM_end2end_model import End2EndMPNet
+from . import utility
+from .. architecture.GEM_end2end_model import End2EndMPNet
 import torch
 import numpy as np
 import time

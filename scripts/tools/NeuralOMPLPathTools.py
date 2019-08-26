@@ -53,14 +53,14 @@ from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, P
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest
 from moveit_msgs.msg import JointConstraint, Constraints
 from std_msgs.msg import Float64, UInt8
-import NeuralPathTools
-from architecture.GEM_end2end_model import End2EndMPNet
+from . import NeuralPathTools
+from .. architecture.GEM_end2end_model import End2EndMPNet
 from ompl import base as ob
 from ompl import geometric as og
-from experiments.simple import plan_general
-from experiments.simple import plan_c2d, plan_s2d, plan_r2d, plan_r3d
-from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
-from experiments.simple import utility_s2d, utility_c2d, utility_r2d, utility_r3d
+from .. experiments.simple import plan_general
+from .. experiments.simple import plan_c2d, plan_s2d, plan_r2d, plan_r3d
+from .. experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
+from .. experiments.simple import utility_s2d, utility_c2d, utility_r2d, utility_r3d
 import torch
 import argparse
 import pickle

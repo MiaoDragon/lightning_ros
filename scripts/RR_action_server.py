@@ -51,8 +51,8 @@ import rospy
 import actionlib
 import threading
 
-from tools import NeuralPathTools# import PlanTrajectoryWrapper, InvalidSectionWrapper, DrawPointsWrapper
-from tools import NeuralOMPLPathTools
+from . tools import NeuralPathTools# import PlanTrajectoryWrapper, InvalidSectionWrapper, DrawPointsWrapper
+from . tools import NeuralOMPLPathTools
 from pathlib.PathLibrary import *
 from lightning.msg import Float64Array, RRAction, RRResult
 from lightning.msg import StopPlanning, RRStats
@@ -62,7 +62,7 @@ from std_msgs.msg import UInt8
 import sys
 import pickle
 import time
-from architecture.GEM_end2end_model import End2EndMPNet
+from . architecture.GEM_end2end_model import End2EndMPNet
 import numpy as np
 import torch.multiprocessing as mp
 # Name of this node.
