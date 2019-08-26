@@ -64,6 +64,10 @@ import pickle
 import time
 from architecture.GEM_end2end_model import End2EndMPNet
 import numpy as np
+
+# try multi-processing for parallel repairing
+import torch.multiprocessing as mp
+
 # Name of this node.
 RR_NODE_NAME = "rr_node"
 # Name to use for stopping the repair planner. Published from this node.
@@ -96,6 +100,9 @@ class RRNode:
         self.current_group_name = ""
         self.plan_trajectory_wrapper = PlanTrajectoryWrapper("rr", int(rospy.get_param("~num_rr_planners")), \
                                             device_name=rospy.get_param('model/rr_device'))
+        # set model to be shared
+        self.plan_trajectory_wrapper.neural_planners[0].share_memory()
+
         self.invalid_section_wrapper = InvalidSectionWrapper()
         self.path_library = PathLibrary(rospy.get_param("~path_library_dir"), rospy.get_param("step_size"), node_size=int(rospy.get_param("~path_library_path_node_size")), sg_node_size=int(rospy.get_param("~path_library_sg_node_size")), dtw_dist=float(rospy.get_param("~dtw_distance")))
         self.num_paths_checked = int(rospy.get_param("~num_paths_to_collision_check"))
@@ -229,7 +236,127 @@ class RRNode:
 
           Args:
             index (int): The index to pass to _set_repaired_section(),
+              corresponding to which o
+
+    def _repair_thread(self, index, start, goal, start_index, goal_index, planning_time):
+        """
+          Handles repairing a portion of the path.
+          All that this function really does is to plan from scratch between
+            the start and goal configurations and then store the planned path
+            in the appropriate places and draws either the repaired path or, if
+            the repair fails, the start and goal.
+
+          Args:
+            index (int): The index to pass to _set_repaired_section(),
               corresponding to which of the invalid sections of the path we are
+              repairing.
+            start (list of float): The start joint configuration to use.
+            goal (list of float): The goal joint configuration to use.
+            start_index (int): The index in the overall path corresponding to
+              start. Only used for debugging info.
+            goal_index (int): The index in the overall path corresponding to
+              goal. Only used for debugging info.
+            planning_time (float): Maximum allowed time to spend planning, in
+              seconds.
+        """
+        planner_type, repaired_path = self._call_planner(start, goal, planning_time)
+        if self.draw_points:
+            if repaired_path is not None and len(repaired_path) > 0:
+                rospy.loginfo("RR action server: got repaired section with start = %s, goal = %s" % (repaired_path[0], repaired_path[-1]))
+                self.draw_points_wrapper.draw_points(repaired_path, self.current_group_name, "repaired"+str(start_index)+"_"+str(goal_index), DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREENBLUE, 1.0, 0.01)
+        else:
+            if self.draw_points:
+                rospy.loginfo("RR action server: path repair for section (%i, %i) failed, start = %s, goal = %s" % (start_index, goal_index, start, goal))
+                self.draw_points_wrapper.draw_points([start, goal], self.current_group_name, "failed_repair"+str(start_index)+"_"+str(goal_index), DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREENBLUE, 1.0)
+        if self._need_to_stop():
+            self._set_repaired_section(index, None)
+        else:
+            self._set_repaired_section(index, repaired_path)
+
+    def _need_to_stop(self):
+        self.stop_lock.acquire();
+        ret = self.stop;
+        self.stop_lock.release();
+        return ret;
+
+    def _set_stop_value(self, val):
+        self.stop_lock.acquire();
+        self.stop = val;
+        self.stop_lock.release();
+
+    def do_retrieved_path_drawing(self, projected, retrieved, invalid):
+        """
+          Draws the points from the various paths involved in the planning
+            in different colors in different namespaces.
+          All of the arguments are lists of joint configurations, where each
+            joint configuration is a list of joint angles.
+          The only distinction between the different arguments being passed in
+            are which color the points in question are being drawn in.
+          Uses the DrawPointsWrapper to draw the points.
+
+          Args:
+            projected (list of list of float): List of points to draw as
+              projected between the library path and the actual start/goal
+              position. Will be drawn in blue.
+            retrieved (list of list of float): The path retrieved straight
+              from the path library. Will be drawn in white.
+            invalid (list of list of float): List of points which were invalid.
+              Will be drawn in red.
+        """
+        if len(projected) > 0:
+            if self.draw_points:
+                self.draw_points_wrapper.draw_points(retrieved, self.current_group_name, "retrieved", DrawPointsWrapper.ANGLES, DrawPointsWrapper.WHITE, 0.1)
+                projectionDisplay = projected[:projected.index(retrieved[0])]+projected[projected.index(retrieved[-1])+1:]
+                self.draw_points_wrapper.draw_points(projectionDisplay, self.current_group_name, "projection", DrawPointsWrapper.ANGLES, DrawPointsWrapper.BLUE, 0.2)
+                invalidDisplay = []
+                for invSec in invalid:
+                    invalidDisplay += projected[invSec[0]+1:invSec[-1]]
+                self.draw_points_wrapper.draw_points(invalidDisplay, self.current_group_name, "invalid", DrawPointsWrapper.ANGLES, DrawPointsWrapper.RED, 0.2)
+
+    def _retrieve_repair(self, action_goal):
+        """
+          Callback which performs the full Retrieve and Repair for the path.
+        """
+        self.working_lock.acquire()
+        self.start_time = time.time()
+        self.stats_msg = RRStats()
+        self._set_stop_value(False)
+        if self.draw_points:
+            self.draw_points_wrapper.clear_points()
+        rospy.loginfo("RR action server: RR got an action goal")
+        s, g = action_goal.start, action_goal.goal
+        res = RRResult()
+        res.status.status = res.status.FAILURE
+        self.current_joint_names = action_goal.joint_names
+        self.current_group_name = action_goal.group_name
+        projected, retrieved, invalid = [], [], []
+        repair_state = STATE_RETRIEVE
+
+        self.stats_msg.init_time = time.time() - self.start_time
+
+        # Go through the retrieve, repair, and return stages of the planning.
+        # The while loop should only ever go through 3 iterations, one for each
+        #   stage.
+        while not self._need_to_stop() and repair_state != STATE_FINISHED:
+            if repair_state == STATE_RETRIEVE:
+                start_retrieve = time.time()
+                projected, retrieved, invalid, retrieve_planner_type = self.path_library.retrieve_path(s, g, self.num_paths_checked, self.robot_name, self.current_group_name, self.current_joint_names)
+                self.stats_msg.retrieve_time.append(time.time() - start_retrieve)
+                if len(projected) == 0:
+                    rospy.loginfo("RR action server: got an empty path for retrieve state")
+                    repair_state = STATE_FINISHED
+                else:
+                    start_draw = time.time()
+                    if self.draw_points:
+                        self.do_retrieved_path_drawing(projected, retrieved, invalid)
+                    self.stats_msg.draw_time.append(time.time() - start_draw)
+                    repair_state = STATE_REPAIR
+            elif repair_state == STATE_REPAIR:
+                start_repair = time.time()
+                repaired_planner_type, repaired = self._path_repair(projected, action_goal.allowed_planning_time.to_sec(), invalid_sections=invalid)
+                self.stats_msg.repair_time.append(time.time() - start_repair)
+                if repaired is None:
+                    rospy.loginfo("f the invalid sections of the path we are
               repairing.
             start (list of float): The start joint configuration to use.
             goal (list of float): The goal joint configuration to use.
@@ -403,7 +530,8 @@ class RRNode:
                 #each thread replans an invalid section
                 threadList = []
                 for i, sec in enumerate(invalid_sections):
-                    th = threading.Thread(target=self._repair_thread, args=(i, original_path[sec[0]], original_path[sec[-1]], sec[0], sec[-1], planning_time))
+                    th = mp.Process(target=self._repair_thread, args=(i, original_path[sec[0]], original_path[sec[-1]], sec[0], sec[-1], planning_time))
+                    #th = threading.Thread(target=self._repair_thread, args=(i, original_path[sec[0]], original_path[sec[-1]], sec[0], sec[-1], planning_time))
                     threadList.append(th)
                     th.start()
                 for th in threadList:
