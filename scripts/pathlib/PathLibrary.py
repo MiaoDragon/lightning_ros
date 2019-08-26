@@ -423,7 +423,7 @@ class PathLibrary:
         for f in all_path_files:
             if f.find(ROOT_NAME) == 0:
                 path_list = self._get_old_paths(old_paths_file+f)
-                print "reorganize", f, len(path_list)
+                print("reorganize %s %d" % (f, len(path_list)))
                 counter += len(path_list)
                 if len(current_paths) + len(path_list) > new_node_size:
                     self._store_multiple_paths(current_paths)
@@ -432,7 +432,7 @@ class PathLibrary:
                     current_paths += path_list
         if len(current_paths) > 0:
             self._store_multiple_paths(current_paths)
-        print "reorganized", counter+len(current_paths), "paths"
+        print("reorganized %d paths" % (counter+len(current_paths)))
 
     #add each path in all_paths to the correct node; used for reorganizing nodes
     def _store_multiple_paths(self, all_paths):
@@ -859,12 +859,12 @@ class PathLibrary:
             retrieved = self._retrieve_path_simple(start, goal, n);
             actual = self.find_distances(start, goal)[0:n]
             retr = [self._total_dist(start, goal, path) for path in retrieved]
-            print "Actual best %i distances: %s" % (n, str(actual))
-            print "Retrieved %i distances: %s" % (n, str(retr))
+            print("Actual best %i distances: %s" % (n, str(actual)))
+            print("Retrieved %i distances: %s" % (n, str(retr)))
             if actual != retr:
-                print "Incorrect retrieval"
+                print("Incorrect retrieval")
             else:
-                print "Correct retrieval"
+                print("Correct retrieval")
 
     def _retrieve_path_simple(self, s, g, n):
         leaf_node = self._get_path_leaf_by_sg(s, g)
@@ -892,7 +892,7 @@ class PathLibrary:
         for f in all_path_files:
             if f.find(ROOT_NAME) == 0:
                 path_list = self._get_old_paths(old_paths_file+f);
-                print "reorganize", f, len(path_list);
+                print("reorganize %s %d" % (f, len(path_list)));
                 for p in path_list:
                     # store path: new path, new_path_planner, robot name, joint name, prev path
                     pid, path, planner_type = p
@@ -905,10 +905,10 @@ class PathLibrary:
                 for path_id, path, planner_type in self._get_paths(f):
                     if path_id == pid:
                         if index < len(path):
-                            print "Path library: path (in %s) is %s" % (f, ' '.join([str(x) for x in path[index]]))
+                            print("Path library: path (in %s) is %s" % (f, ' '.join([str(x) for x in path[index]])))
                             return path[index]
                         else:
-                            print "Index is out of range of path (in %s), path is %i points long" % (f, len(path))
+                            print("Index is out of range of path (in %s), path is %i points long" % (f, len(path)))
                             return None
 
 if __name__ == "__main__":
