@@ -376,7 +376,7 @@ class PathLibrary:
                 if current_node.is_leaf():
                     counter += 1;
                     best_sgs += [(pid, current_node.name, sg) for pid, sg in self._get_sgs_from_path_name(current_node.name)];
-                    best_sgs = sorted(best_sgs, key=(lambda (path_id, path_name, sg): self._proj_dist(target_sg, sg)))[:n];
+                    best_sgs = sorted(best_sgs, key=(lambda path_id, path_name, sg: self._proj_dist(target_sg, sg)))[:n];
                     max_dist = self._proj_dist(target_sg, best_sgs[-1][2]);
                 else:
                     if not self._can_prune(current_count, current_node.name, path_leaf_node.name, max_dist):
@@ -385,7 +385,7 @@ class PathLibrary:
                         nodes.append((current_count, current_node.right));
         rospy.loginfo("Path library: Number of nodes checked: %i" % counter);
         rospy.loginfo("Path library: distances are %s" % ([(path_id, path_name, self._proj_dist(target_sg, sg)) for path_id, path_name, sg in best_sgs]))
-        return sorted(self._get_paths_of_sgs(best_sgs), key=(lambda (pid, path_name, p, planner_type): self._total_dist(target_start, target_goal, p)));
+        return sorted(self._get_paths_of_sgs(best_sgs), key=(lambda pid, path_name, p, planner_type: self._total_dist(target_start, target_goal, p)));
 
     def _can_prune(self, counts, node_name, target_node_name, max_dist):
         short_dirs, long_dirs = sorted([self._get_path_directions(name) for name in [node_name, target_node_name]], key=(lambda x: len(x)))
@@ -484,7 +484,7 @@ class PathLibrary:
         max_range = (None, float('-inf')); #tuple of (tuple indicating split index, range on that index)
         for state in [START, GOAL]:
             for index in xrange(self.current_num_dims):
-                sort_key = lambda (pid, p, planner_type): p[state][index];
+                sort_key = lambda pid, p, planner_type: p[state][index];
                 temp_range = self._angle_between(sort_key(max(paths, key=sort_key)), sort_key(min(paths, key=sort_key)));
                 if temp_range > max_range[1]:
                     max_range = ((state, index), temp_range);
