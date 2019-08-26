@@ -119,9 +119,9 @@ class PlanTrajectoryWrapper:
             num_planners (int): The number of planner nodes that are being used.
         """
         # depending on argument, choose to use either OMPL direct planning or MoveIt
-        self.planners = ["%s_planner_node%i/%s" % (node_type, i, PLANNER_NAME) for i in xrange(num_planners)]
+        self.planners = ["%s_planner_node%i/%s" % (node_type, i, PLANNER_NAME) for i in range(num_planners)]
         rospy.loginfo("Initializaing %i planners for %s" % (num_planners, node_type))
-        self.planners_available = [True for i in xrange(num_planners)]
+        self.planners_available = [True for i in range(num_planners)]
         self.planner_lock = threading.Lock()
         self.released_event = threading.Event()
         self.released_event.set()
@@ -241,7 +241,7 @@ class PlanTrajectoryWrapper:
 
         req.motion_plan_request.goal_constraints.append(Constraints())
         req.motion_plan_request.goal_constraints[0].joint_constraints = []
-        for i in xrange(len(joint_names)):
+        for i in range(len(joint_names)):
             temp_constraint = JointConstraint()
             temp_constraint.joint_name = joint_names[i]
             temp_constraint.position = goal_point[i]
@@ -474,5 +474,5 @@ class DrawPointsWrapper:
 if __name__ == "__main__":
     if len(sys.argv) == 8:
         isw = InvalidSectionWrapper()
-        path = [float(sys.argv[i]) for i in xrange(1, len(sys.argv))]
+        path = [float(sys.argv[i]) for i in range(1, len(sys.argv))]
         print(isw.get_invalid_sections_for_path([path]))
