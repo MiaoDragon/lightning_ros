@@ -46,7 +46,10 @@ smooth out the path. This post-processing is not strictly necessary; all it
 does is shortcut between random pairs of points.
 """
 import sys, os
-sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+import rospkg
+rospack = rospkg.RosPack()
+top_path = rospack.get_path('lightning')
+sys.path.insert(1, top_path+'/scripts')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import roslib
 #roslib.load_manifest("lightning");

@@ -1,5 +1,8 @@
 import sys, os
-sys.path.insert(1, '/root/catkin_ws/src/lightning_ros/scripts')
+import rospkg
+rospack = rospkg.RosPack()
+top_path = rospack.get_path('lightning')
+sys.path.insert(1, top_path+'/scripts')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 #sys.path.insert(1, '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/scripts')
 from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
