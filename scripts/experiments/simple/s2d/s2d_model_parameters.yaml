@@ -1,6 +1,6 @@
 mlp_arch_path: 'architecture.model'
 cae_arch_path: 'architecture.AE.CAE'
-model_path: '/root/catkin_ws/src/lightning_ros/results/simple/s2d/'
+model_path: '/home/arclabdl1/YLmiao/catkin_ws/src/mpnet_lightning_ros/results/simple/s2d/'
 model_name: 'model_s2d.pkl'
 normalizer_path: 'experiments.simple.utility_s2d'
 world_size: [20, 20, 20]
