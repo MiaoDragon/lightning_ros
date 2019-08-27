@@ -81,6 +81,7 @@ add_action_files(
   FILES
   PFS.action
   RR.action
+  Update.action
 )
 
 ## Generate added messages and services with any dependencies listed here
