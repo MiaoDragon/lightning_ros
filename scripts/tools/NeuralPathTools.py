@@ -53,6 +53,7 @@ import rospy
 import threading
 import sys
 
+import actionlib
 from lightning.msg import UpdateAction, UpdateResult
 from lightning.msg import Float64Array, Float64Array2D, DrawPoints
 from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, PathShortcutRequest
