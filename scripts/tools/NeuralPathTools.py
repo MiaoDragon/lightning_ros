@@ -147,7 +147,7 @@ class PlanTrajectoryWrapper:
 
         # start a server that listens to the signals from lightning main service
         # this server will update the model
-        self.update_server = actionlib.SimpleActionServer(rospy.get_name(), UpdateAction, execute_cb=self._update_model, auto_start=False)
+        self.update_server = actionlib.SimpleActionServer(rospy.get_name()+'/update', UpdateAction, execute_cb=self._update_model, auto_start=False)
         self.update_server.start()
 
     def _update_model(self, goal):

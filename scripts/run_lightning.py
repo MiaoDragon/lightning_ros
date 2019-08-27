@@ -59,7 +59,7 @@ import threading
 
 import time
 import os
-from lightning.msg import UpdateAction, UpdateResult
+from lightning.msg import UpdateAction, UpdateGoal
 from lightning.msg import RRAction, RRGoal, PFSAction, PFSGoal, Float64Array, StopPlanning, Stats, PlannerType
 from lightning.srv import ManagePathLibrary, ManagePathLibraryRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanResponse
@@ -167,8 +167,8 @@ class Lightning:
             utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
         # notify to synchronize model weights
         # create client to signal planner for updating
-        self.pfs_update_client = actionlib.SimpleActionClient('/lightning/'+PFS_NODE_NAME, UpdateAction)
-        self.rr_update_client = actionlib.SimpleActionClient('/lightning/'+RR_NODE_NAME, UpdateAction)
+        self.pfs_update_client = actionlib.SimpleActionClient('/lightning/'+PFS_NODE_NAME+'/update', UpdateAction)
+        self.rr_update_client = actionlib.SimpleActionClient('/lightning/'+RR_NODE_NAME+'/update', UpdateAction)
         ## TODO: use conditional lock for faster response
         # this lock is for preventing save and load at the same time
         #self.model_lock = threading.Lock()
