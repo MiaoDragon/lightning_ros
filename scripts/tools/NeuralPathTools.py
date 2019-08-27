@@ -53,6 +53,7 @@ import rospy
 import threading
 import sys
 
+from lightning.msg import UpdateAction, UpdateResult
 from lightning.msg import Float64Array, Float64Array2D, DrawPoints
 from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest, GetStateValidity, GetStateValidityRequest, GetStateValidityResponse
@@ -141,30 +142,24 @@ class PlanTrajectoryWrapper:
         self.device = device
         self.neural_planners = [utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)]
         rospy.loginfo('%s Initializing planner for MPNet...' % (rospy.get_name()))
-        ## TODO: might consider adding locks for multiple MPNets, but currently not needed
-        self.model_update_subscriber = rospy.Subscriber(UPDATE_TOPIC, UInt8, self._update_model)
         self.model_lock = threading.Lock() # to ensure you don't update and predict at the same time
 
-    def _update_model(self, msg):
+        # start a server that listens to the signals from lightning main service
+        # this server will update the model
+        self.update_server = actionlib.SimpleActionServer(rospy.get_name(), UpdateAction, execute_cb=self._update_model, auto_start=False)
+        self.update_server.start()
+
+    def _update_model(self, goal):
         rospy.loginfo('%s PlanTrajectoryWrapper: Updating model...' % (rospy.get_name()))
         self.model_lock.acquire()
         # load from file
-        ## TODO: check if need to map the device to the desired one
-        # try until the model get correctly updated
-        stage = 0
         utility.load_net_state(self.neural_planners[0], self.model_path+self.model_name)
-        #while True:
-        #    try:
-        #        if stage == 0:
-        #            utility.load_net_state(self.neural_planners[0], self.model_path+self.model_name)
-        #        else:
-        #            self.neural_planners[0] = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, self.device)
-        #        # if this succeeded, break the loop
-        #        break
-        #    except:
-        #        rospy.loginfo('%s PlanTrajectoryWrapper: Model updating catched some errors...' % (rospy.get_name()))
         self.model_lock.release()
         rospy.loginfo('%s PlanTrajectoryWrapper: Model got updated.' % (rospy.get_name()))
+        res = UpdateResult()
+        self.update_server.set_succeeded(res)
+        return
+
 
     def acquire_neural_planner(self):
         self.model_lock.acquire()

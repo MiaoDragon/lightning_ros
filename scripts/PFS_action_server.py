@@ -82,6 +82,8 @@ class PFSNode:
             PlanTrajectoryWrapper = NeuralPathTools.PlanTrajectoryWrapper
 
         self.plan_trajectory_wrapper = PlanTrajectoryWrapper("pfs", device_name=rospy.get_param('model/pfs_device'))
+        self.plan_trajectory_wrapper.neural_planners[0].share_memory()
+
         self.planner_config_name = rospy.get_param("planner_config_name")
         self.stop_lock = threading.Lock()
         self.current_joint_names = []

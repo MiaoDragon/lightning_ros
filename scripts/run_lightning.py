@@ -85,7 +85,7 @@ SET_PLANNING_SCENE_DIFF_NAME = "/get_planning_scene";
 MANAGE_LIBRARY = "manage_path_library"
 
 # Topic to publish to for updating the neural network
-UPDATE_TOPIC = 'model_update'
+# UPDATE_TOPIC = 'model_update'
 class Lightning:
     def __init__(self):
         # depending on the argument framework_type, use different classes and settings
@@ -159,36 +159,56 @@ class Lightning:
 
         self.torch_seed, self.np_seed, self.py_seed = 0, 0, 0
 
-        # construct publisher to notify server the model is trained
-        self._model_trained_publisher = rospy.Publisher(UPDATE_TOPIC, UInt8, queue_size=10)
-
         # to make sure initially the planner and server have the same model,
         # we save the model at the beginning if the model file does not exist
         if not os.path.isfile(self.model_path+self.model_name):
             rospy.loginfo('Lightning: Saving initial network parameters...')
             utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
         # notify to synchronize model weights
-        rospy.sleep(2)  # sleep so that subscriber can obtain message
+        # create client to signal planner for updating
+        self.pfs_update_client = actionlib.SimpleActionClient('/lightning/'+PFS_NODE_NAME, UpdateAction)
+        self.rr_update_client = actionlib.SimpleActionClient('/lightning/'+RR_NODE_NAME, UpdateAction)
+        ## TODO: use conditional lock for faster response
+        # this lock is for preventing save and load at the same time
+        #self.model_lock = threading.Lock()
+        #self.read_or_write = -1  # -1 for idle, 0 for write, 1+ for read
         rospy.loginfo('Lightning: Notify planner to update network...')
-        self._notify_update()
+        self._notify_update('pfs')
+        self._notify_update('rr')
 
         # for information of training
         self.losses = []
         self.planner_types = []
         self.time = []
 
-    def _notify_update(self):
-        # do this for 2 seconds to make sure all models got updated
-        #start_time = time.time()
-        # send 4 signals
-        for i in xrange(2):
-            self._model_trained_publisher.publish(UInt8(0))
-            rospy.sleep(0.5)
-        #while True:
-        #    self._model_trained_publisher.publish(UInt8(0))
-        #    print(time.time()-start_time)
-        #    if time.time() - start_time > 2:
-        #        break
+    def _notify_update(self, client_name):
+        if client_name == 'pfs':
+            client = self.pfs_update_client
+        else:
+            client = self.rr_update_client
+        update_client_goal = UpdateGoal()
+        client.wait_for_server()
+        """
+        ### TODO:  below is a conditional lock so that the lightning server can be faster
+        # not sure if bug-free
+        while True:
+            # check the model lock to prevent writing when reading
+            self.model_lock.acquire()
+            if self.read_or_write == -1:
+                self.read_or_write = 1
+            if self.read_or_write >= 1:
+                # one more reader
+                self.read_or_write += 1
+            if self.read_or_write >= 1:
+                self.model_lock.release()
+                break
+            self.model_lock.release()
+        """
+        rospy.loginfo("Lightning: Sending Update Goal to %s Client" % (client_name))
+        # a safer way: when model is updating, we just wait for it to complete
+        client.send_goal(update_client_goal)
+        client.wait_for_result()
+
     # Called in a separate thread to stop the planning nodes in case of timeout.
     def _lightning_timeout(self, time):
         self.lightning_response_ready_event.wait(time)
@@ -338,7 +358,8 @@ class Lightning:
         # notify planners to update the model
         msg = UInt8(0)
         rospy.loginfo('Lightning: Notify planner to update network...')
-        self._notify_update()
+        self._notify_update('pfs')
+        self._notify_update('rr')
 
     def _print_error(self, msg):
         rospy.logerr("***ERROR*** %s ***ERROR***" % (msg))
