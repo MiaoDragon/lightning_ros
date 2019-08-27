@@ -4,7 +4,7 @@ import copy
 import rospy
 import os
 import importlib
-from filelock import FileLock
+#from filelock import FileLock
 
 def to_var(x, device=torch.device('cpu'), volatile=False):
     x = x.to(device)
@@ -19,12 +19,7 @@ def save_state(net, torch_seed, np_seed, py_seed, fname):
         'np_seed': np_seed,
         'py_seed': py_seed
     }
-    try:
-        with FileLock(fname):
-            torch.save(states, fname)
-    except:
-        # maybe a Ctrl+C here
-        pass
+    torch.save(states, fname)
 
 def save_info(loss, planner_type, plan_time, fname):
     states = {
@@ -35,19 +30,12 @@ def save_info(loss, planner_type, plan_time, fname):
     torch.save(states, fname)
 
 def load_net_state(net, fname):
-    try:
-        with FileLock(fname):
-            checkpoint = torch.load(fname)
-            net.load_state_dict(checkpoint['state_dict'])
-    except:
-        pass
+
+    checkpoint = torch.load(fname)
+    net.load_state_dict(checkpoint['state_dict'])
 
 def load_opt_state(net, fname):
-    try:
-        with FileLock(fname):
-            checkpoint = torch.load(fname)
-    except:
-        pass
+    checkpoint = torch.load(fname)
     net.opt.load_state_dict(checkpoint['optimizer'])
 
 def load_seed(fname):
@@ -91,10 +79,7 @@ def create_and_load_model(ModelConstr, fname, device):
     rospy.loginfo('Creating and loading model...')
     model = create_model(ModelConstr, device)
     if os.path.isfile(fname):
-        try:
-            load_net_state(model, fname)
-        except:
-            pass
+        load_net_state(model, fname)
     # make sure the new loaded weights are transformed as well
     model.to(device=device)
     # create optimizer
@@ -103,10 +88,7 @@ def create_and_load_model(ModelConstr, fname, device):
     create_optimizer(model)
     # load optimizer if there exists previous one
     if os.path.isfile(fname):
-        try:
-            load_opt_state(model, fname)
-        except:
-            pass
+        load_opt_state(model, fname)
     return model
 
 def get_normalizer():
