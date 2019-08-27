@@ -32,6 +32,7 @@ def save_info(loss, planner_type, plan_time, fname):
 def load_net_state(net, fname):
 
     checkpoint = torch.load(fname)
+    rospy.loginfo('Successfully loaded the file...')
     net.load_state_dict(checkpoint['state_dict'])
 
 def load_opt_state(net, fname):

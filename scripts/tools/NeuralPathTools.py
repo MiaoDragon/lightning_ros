@@ -150,10 +150,19 @@ class PlanTrajectoryWrapper:
         self.model_lock.acquire()
         # load from file
         ## TODO: check if need to map the device to the desired one
-        try:
-            utility.load_net_state(self.neural_planners[0], self.model_path+self.model_name)
-        except:
-            rospy.loginfo('%s PlanTrajectoryWrapper: Model updating catched some errors...' % (rospy.get_name()))
+        # try until the model get correctly updated
+        stage = 0
+        utility.load_net_state(self.neural_planners[0], self.model_path+self.model_name)
+        #while True:
+        #    try:
+        #        if stage == 0:
+        #            utility.load_net_state(self.neural_planners[0], self.model_path+self.model_name)
+        #        else:
+        #            self.neural_planners[0] = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, self.device)
+        #        # if this succeeded, break the loop
+        #        break
+        #    except:
+        #        rospy.loginfo('%s PlanTrajectoryWrapper: Model updating catched some errors...' % (rospy.get_name()))
         self.model_lock.release()
         rospy.loginfo('%s PlanTrajectoryWrapper: Model got updated.' % (rospy.get_name()))
 
