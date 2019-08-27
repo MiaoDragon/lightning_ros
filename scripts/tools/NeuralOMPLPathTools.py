@@ -476,10 +476,5 @@ class DrawPointsWrapper(NeuralPathTools.DrawPointsWrapper):
 if __name__ == "__main__":
     if len(sys.argv) == 8:
         isw = InvalidSectionWrapper()
-<<<<<<< HEAD
         path = [float(sys.argv[i]) for i in xrange(1, len(sys.argv))]
         print(isw.get_invalid_sections_for_path([path]))
-=======
-        path = [float(sys.argv[i]) for i in xxrange(1, len(sys.argv))]
-        print isw.get_invalid_sections_for_path([path])
->>>>>>> parent of 2c7c427... change to python3 syntax
