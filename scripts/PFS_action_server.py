@@ -162,7 +162,11 @@ class PFSNode:
         self.plan_trajectory_wrapper.release_neural_planner(planner_number)
         self._call_neural_planner_res = [neural_planner_time, ret]
         rospy.loginfo('PFS_action_server: Finished neural planning.')
-
+        # print parameter of network to see if it gets udpated
+        print('printing model parameters...')
+        for param in self.plan_trajectory_wrapper.neural_planners[0].parameters():
+            print(param.data)
+            break
 
 
     def _call_planner(self, start, goal, planning_time):
