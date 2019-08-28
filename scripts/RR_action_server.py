@@ -63,7 +63,7 @@ from lightning.msg import Float64Array, RRAction, RRResult
 from lightning.msg import StopPlanning, RRStats
 from lightning.msg import PlannerType
 from lightning.srv import ManagePathLibrary, ManagePathLibraryResponse
-from std_msgs.msg import UInt8, Int32
+from std_msgs.msg import UInt8
 import sys
 import pickle
 import time
@@ -361,8 +361,8 @@ class RRNode:
                 res.retrieved_planner_type = retrieve_planner_type
                 res.repaired_planner_type = repaired_planner_type
                 # added more information of the planner
-                res.total_num_paths = Int32(total_num_paths)
-                res.total_num_paths_NN = Int32(total_num_paths_NN)
+                res.total_num_paths = total_num_paths
+                res.total_num_paths_NN = total_num_paths_NN
                 rospy.loginfo("RR action server: total_num_paths_NN before returning: %d" % (total_num_paths_NN))
                 rospy.loginfo("RR action server: returning a path")
                 repair_state = STATE_FINISHED
