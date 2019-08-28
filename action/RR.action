@@ -18,6 +18,6 @@ Float64Array[] repaired_path
 Status status
 PlannerType retrieved_planner_type
 PlannerType repaired_planner_type
-int64 total_num_paths
-int64 total_num_paths_NN
+Int32 total_num_paths
+Int32 total_num_paths_NN
 ---

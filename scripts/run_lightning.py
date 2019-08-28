@@ -411,8 +411,8 @@ class Lightning:
 
                 rr_path = [p.values for p in result.repaired_path]
                 retrieved_path = [p.values for p in result.retrieved_path]
-                total_num_paths = result.total_num_paths
-                total_num_paths_NN = result.total_num_paths_NN
+                total_num_paths = result.total_num_paths.data
+                total_num_paths_NN = result.total_num_paths_NN.data
                 print('rr_done_cb: total_num_paths_NN: %d' % (total_num_paths_NN))
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)
