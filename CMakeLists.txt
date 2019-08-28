@@ -211,9 +211,3 @@ target_link_libraries(collision_check_service
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-
-# automatically generate messages
-rosbuild_find_ros_package(actionlib_msgs)
-include(${actionlib_msgs_PACKAGE_PATH}/cmake/actionbuild.cmake)
-genaction()
-rosbuild_genmsg()
