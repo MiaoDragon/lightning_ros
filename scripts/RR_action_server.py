@@ -478,6 +478,7 @@ class RRNode:
             new_path = original_path
 
         rospy.loginfo("RR action server: new trajectory has %i points" % (len(new_path)))
+        rospy.loginfo('RR action server: returned total_num_paths_NN: %d' % (total_num_paths_NN))
         return repaired_planner_type, new_path, total_num_paths, total_num_paths_NN
 
     def _stop_rr_planner(self, msg):

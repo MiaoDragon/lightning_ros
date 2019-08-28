@@ -413,6 +413,7 @@ class Lightning:
                 retrieved_path = [p.values for p in result.retrieved_path]
                 total_num_paths = result.total_num_paths
                 total_num_paths_NN = result.total_num_paths_NN
+                print('rr_done_cb: total_num_paths_NN: %d' % (total_num_paths_NN))
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)
                 if self.publish_stats:
