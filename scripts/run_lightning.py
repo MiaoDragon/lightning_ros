@@ -154,7 +154,7 @@ class Lightning:
         if device_name != 'cpu':
             torch.cuda.set_device(int(device_name.split(':')[1]))
         self.model = utility.create_and_load_model(End2EndMPNet, self.model_path+self.model_name, device)
-        self.retrieved_and_final_path = [None, None, None, None]
+        self.retrieved_and_final_path = [None, None, None, None, None, None]
         # record current planning path
         # format: [planner_type, path, planner_type, path]
 
@@ -179,7 +179,8 @@ class Lightning:
 
         # for information of training
         self.losses = []
-        self.planner_types = []
+        self.total_num_paths = []  # this record how many paths are planned
+        self.total_num_paths_NN = []   # this record how many are planned by NN
         self.time = []
 
     def _notify_update(self, client_name):
@@ -223,7 +224,7 @@ class Lightning:
     # Main service routine advertised for the benefit of the user.
     def run(self, request):
         #make sure the request is valid
-        self.retrieved_and_final_path = [None, None, None, None]
+        self.retrieved_and_final_path = [None, None, None, None, None, None]
         start_and_goal = self._is_valid_motion_plan_request(request)
         if start_and_goal is None:
             response = GetMotionPlanResponse()
@@ -298,14 +299,16 @@ class Lightning:
         3. save the new model weights to file
         4. notify planners to update the model
         """
-        retrieved_planner_type, retrieved_path, final_planner_type, final_path = self.retrieved_and_final_path
+        retrieved_planner_type, retrieved_path, final_planner_type, final_path, num_paths, num_NN_paths = self.retrieved_and_final_path
         # record stats
+        self.total_num_paths.append(num_paths)
+        self.total_num_paths_NN.append(num_NN_paths)
         self.planner_types.append(final_planner_type)
         self.plan_times.append(self.plan_time)
         # depending on retrieved_planner_type and final_planner, train the network
         if (retrieved_planner_type is None and final_planner_type == PlannerType.NEURAL) \
             or (retrieved_planner_type == PlannerType.NEURAL and final_planner_type == PlannerType.NEURAL):
-            utility.save_info(self.losses, self.planner_types, self.plan_times, self.model_path+'lightning_res.pkl')
+            utility.save_info(self.losses, self.total_num_paths, self.total_num_paths_NN, self.plan_times, self.model_path+'lightning_res.pkl')
             return
         rospy.loginfo('Lightning: Training Neural Network...')
         # receive obstacle information
@@ -409,6 +412,8 @@ class Lightning:
 
                 rr_path = [p.values for p in result.repaired_path]
                 retrieved_path = [p.values for p in result.retrieved_path]
+                total_num_paths = result.total_num_paths
+                total_num_paths_NN = result.total_num_paths_NN
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)
                 if self.publish_stats:
@@ -419,7 +424,8 @@ class Lightning:
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
                 # record the planned path and planner
                 self.retrieved_and_final_path = [result.retrieved_planner_type.planner_type, None, \
-                                                 result.repaired_planner_type.planner_type, rr_path]
+                                                 result.repaired_planner_type.planner_type, rr_path, \
+                                                 total_num_paths, total_num_paths_NN]
 
                 self.lightning_response_ready_event.set()
                 self.done_lock.release()
@@ -474,6 +480,11 @@ class Lightning:
 
                 # record the planned path and planner
                 self.retrieved_and_final_path = [None, None, result.planner_type.planner_type, pfsPath]
+                if result.planner_type.planner_type == PlannerType.CLASSIC:
+                    self.retrieved_and_final_path += [1, 0]
+                else:
+                    self.retrieved_and_final_path += [1, 1]
+
 
                 self.lightning_response_ready_event.set()
                 self.done_lock.release()
