@@ -454,10 +454,12 @@ class RRNode:
                         start_invalid, end_invalid = invalid_sections[i]
                         rospy.loginfo("RR action server: Requesting path to replace from %d to %d" % (start_invalid, end_invalid))
                         planner_type, repairedSection = self._call_planner(original_path[start_invalid], original_path[end_invalid], new_planning_time)
+                        rospy.loginfo('RR action server: result planner type: %d' % (planner_type))
                         if planner_type == PlannerType.CLASSIC:
                             repaired_planner_type = PlannerType.CLASSIC
                         else:
                             total_num_paths_NN += 1
+                        rospy.loginfo('RR action server: total_num_paths_NN: %d' % (total_num_paths_NN))
                         ## TODO: returning only invalid sections that are planned by classical method, and train only on them
                         ## TODO: modify library path format to add planner type, so we can train model according to it
                         if repairedSection is None:
