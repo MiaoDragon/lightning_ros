@@ -363,6 +363,7 @@ class RRNode:
                 # added more information of the planner
                 res.total_num_paths = total_num_paths
                 res.total_num_paths_NN = total_num_paths_NN
+                rospy.loginfo("RR action server: total_num_paths_NN before returning: %d" % (total_num_paths_NN))
                 rospy.loginfo("RR action server: returning a path")
                 repair_state = STATE_FINISHED
                 self.stats_msg.return_time = time.time() - start_return
