@@ -227,7 +227,7 @@ class PFSNode:
             # The planner succeeded; actually return the path in the result.
             res.status.status = res.status.SUCCESS
             res.path = [Float64Array(p) for p in unfiltered]
-            res.planner_type = planner_type
+            res.planner_type.planner_type = planner_type
             self.pfs_server.set_succeeded(res)
             return
         else:

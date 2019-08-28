@@ -332,7 +332,7 @@ class RRNode:
         while not self._need_to_stop() and repair_state != STATE_FINISHED:
             if repair_state == STATE_RETRIEVE:
                 start_retrieve = time.time()
-                projected, retrieved, invalid, retrieve_planner_type = self.path_library.retrieve_path(s, g, self.num_paths_checked, self.robot_name, self.current_group_name, self.current_joint_names)
+                projected, retrieved, invalid, retrieved_planner_type = self.path_library.retrieve_path(s, g, self.num_paths_checked, self.robot_name, self.current_group_name, self.current_joint_names)
                 self.stats_msg.retrieve_time.append(time.time() - start_retrieve)
                 if len(projected) == 0:
                     rospy.loginfo("RR action server: got an empty path for retrieve state")
@@ -358,8 +358,8 @@ class RRNode:
                 res.status.status = res.status.SUCCESS
                 res.retrieved_path = [Float64Array(p) for p in retrieved]
                 res.repaired_path = [Float64Array(p) for p in repaired]
-                res.retrieved_planner_type = retrieve_planner_type
-                res.repaired_planner_type = repaired_planner_type
+                res.retrieved_planner_type.planner_type = retrieved_planner_type
+                res.repaired_planner_type.planner_type = repaired_planner_type
                 # added more information of the planner
                 res.total_num_paths = total_num_paths
                 res.total_num_paths_NN = total_num_paths_NN
