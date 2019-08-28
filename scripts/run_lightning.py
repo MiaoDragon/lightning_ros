@@ -303,7 +303,6 @@ class Lightning:
         # record stats
         self.total_num_paths.append(num_paths)
         self.total_num_paths_NN.append(num_NN_paths)
-        self.planner_types.append(final_planner_type)
         self.plan_times.append(self.plan_time)
         # depending on retrieved_planner_type and final_planner, train the network
         if (retrieved_planner_type is None and final_planner_type == PlannerType.NEURAL) \
@@ -355,7 +354,7 @@ class Lightning:
 
         if self.num_path_trained % self.freq_save == 0:
             # save loss and planner type
-            utility.save_info(self.losses, self.planner_types, self.plan_times, self.model_path+'lightning_res.pkl')
+            utility.save_info(self.losses, self.total_num_paths, self.total_num_paths_NN, self.plan_times, self.model_path+'lightning_res.pkl')
 
         # write trained model to file
         utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)

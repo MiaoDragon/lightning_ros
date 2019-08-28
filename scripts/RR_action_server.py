@@ -400,6 +400,8 @@ class RRNode:
             invalid_sections = self.invalid_section_wrapper.getInvalidSectionsForPath(original_path, self.current_group_name)
         rospy.loginfo("RR action server: invalid sections: %s" % (str(invalid_sections)))
         repaired_planner_type = PlannerType.NEURAL
+        total_num_paths = 0
+        total_num_paths_NN = 0
         if len(invalid_sections) > 0:
             if invalid_sections[0][0] == -1:
                 rospy.loginfo("RR action server: Start is not a valid state...nothing can be done")
@@ -410,7 +412,7 @@ class RRNode:
 
             if use_parallel_repairing:
                 #multi-threaded repairing
-                ## TODO: consider how to adapt here for neural network
+                # currently this is not working because we can't use Pytorch in multithread or multiprocessing
                 self.repaired_sections = [None for i in xrange(len(invalid_sections))]
                 #each thread replans an invalid section
                 threadList = []
