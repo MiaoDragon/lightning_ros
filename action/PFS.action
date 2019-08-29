@@ -15,5 +15,4 @@ duration allowed_planning_time
 Float64Array[] path
 Status status
 PlannerType planner_type
-int32 total_new_node_NN
 ---
