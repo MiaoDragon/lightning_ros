@@ -459,13 +459,13 @@ class RRNode:
                 total_num_paths_NN = 0
                 total_new_node = 0
                 total_new_node_NN = 0
-                new_planning_time = planning_time / len(invalid_sections)  # averagely split the planning time
+                #new_planning_time = planning_time / len(invalid_sections)  # averagely split the planning time
                 for i in xrange(len(invalid_sections)):
                     if not self._need_to_stop():
                         #start_invalid and end_invalid must correspond to valid states when passed to the planner
                         start_invalid, end_invalid = invalid_sections[i]
                         rospy.loginfo("RR action server: Requesting path to replace from %d to %d" % (start_invalid, end_invalid))
-                        planner_type, repairedSection = self._call_planner(original_path[start_invalid], original_path[end_invalid], new_planning_time)
+                        planner_type, repairedSection = self._call_planner(original_path[start_invalid], original_path[end_invalid], planning_time)
                         rospy.loginfo('RR action server: result planner type: %d' % (planner_type))
                         if planner_type == PlannerType.CLASSIC:
                             repaired_planner_type = PlannerType.CLASSIC
