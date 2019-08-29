@@ -231,6 +231,8 @@ class Lightning:
     def run(self, request):
         #make sure the request is valid
         self.retrieved_and_final_path = [None, None, None, None, None, None]
+        self.total_new_node = 0
+        self.total_new_node_NN = 0
         start_and_goal = self._is_valid_motion_plan_request(request)
         if start_and_goal is None:
             response = GetMotionPlanResponse()
