@@ -508,17 +508,15 @@ class Lightning:
                 # set planning time to be the total time up to now
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
 
-                # store the number of newly generated nodes
-                self.total_new_node = result.total_new_node
-                self.total_new_node_NN = result.total_new_node_NN
-
                 # record the planned path and planner
                 self.retrieved_and_final_path = [None, None, result.planner_type.planner_type, pfsPath]
                 if result.planner_type.planner_type == PlannerType.CLASSIC:
                     self.retrieved_and_final_path += [1, 0]
+                    # store the number of newly generated nodes
                     self.total_new_node = len(pfsPath)
                 else:
                     self.retrieved_and_final_path += [1, 1]
+                    # store the number of newly generated nodes
                     self.total_new_node = len(pfsPath)
                     self.total_new_node_NN = len(pfsPath)
 
