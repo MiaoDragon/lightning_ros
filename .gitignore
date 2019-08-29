@@ -1,0 +1,5 @@
+# ignore data and results
+data/**
+results/**
+# ignore generated paths
+scripts/pathlib/paths/**

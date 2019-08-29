@@ -282,7 +282,7 @@ class PlanTrajectoryWrapper:
         else:
             rospy.loginfo("%s Plan Trajectory Wrapper: service call to %s was unsuccessful"
             % (rospy.get_name(), planner_client.resolved_name))
-            return plan_time, None, None
+            return plan_time, None
 
     def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
         """

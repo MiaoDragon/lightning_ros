@@ -25,7 +25,7 @@
         <param name="planner_config_name" value="ompl" />
 
         <!-- handles requests for RR planning -->
-        <node name="rr_node" pkg="lightning" type="RR_action_server.py" output="screen">
+        <node name="rr_node" pkg="lightning" type="classic_RR_action_server.py" output="screen">
             <param name="num_rr_planners" value="2" />
             <param name="path_library_path_node_size" value="8" />
             <param name="path_library_sg_node_size" value="50" />
@@ -35,11 +35,11 @@
         </node>
 
         <!-- handles requests for PFS planning -->
-        <node name="pfs_node" pkg="lightning" type="PFS_action_server.py" output="screen">
+        <node name="pfs_node" pkg="lightning" type="classic_PFS_action_server.py" output="screen">
         </node>
 
         <!-- receives planning requests and routes them to RR and/or PFS -->
-        <node name="lightning" pkg="lightning" type="run_lightning.py" output="screen">
+        <node name="lightning" pkg="lightning" type="run_classic_lightning.py" output="screen">
             <param name="store_paths" value="true" />
             <param name="use_RR" value="true" />
             <param name="use_PFS" value="true" />

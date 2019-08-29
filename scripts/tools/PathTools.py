@@ -135,7 +135,7 @@ class PlanTrajectoryWrapper:
 
     #planner to get new trajectory from start_point to goal_point
     #planner_number is the number received from acquire_planner
-    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
+    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
         """
           Given a start and goal point, returns the planned path.
 
@@ -181,19 +181,20 @@ class PlanTrajectoryWrapper:
         #call the planner
         rospy.wait_for_service(self.planners[planner_number])
         rospy.loginfo("Plan Trajectory Wrapper: sent request to service %s" % planner_client.resolved_name)
+        plan_time = time.time()
         try:
             response = planner_client(req)
         except rospy.ServiceException, e:
             rospy.loginfo("Plan Trajectory Wrapper: service call failed: %s"%e)
-            return None
-
+            return None, None
+        plan_time = time.time() - plan_time
         # Pull a list of joint positions out of the returned plan.
         rospy.loginfo("Plan Trajectory Wrapper: %s returned" % (self.planners[planner_number]))
         if response.motion_plan_response.error_code.val == response.motion_plan_response.error_code.SUCCESS:
-            return [pt.positions for pt in response.motion_plan_response.trajectory.joint_trajectory.points]
+            return plan_time, [pt.positions for pt in response.motion_plan_response.trajectory.joint_trajectory.points]
         else:
             rospy.loginfo("Plan Trajectory Wrapper: service call to %s was unsuccessful" % planner_client.resolved_name)
-            return None
+            return None, None
 
 class ShortcutPathWrapper:
     """

@@ -176,36 +176,39 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         # for thread-safety, should not modify shared vars
         #self.si = ob.SpaceInformation(space)
 
-    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
+    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
         """
             Use OMPL library for planning. Obtain obstacle information from rostopic for
             collision checking
         """
         # obtain obstacle information through rostopic
-        rospy.loginfo("Plan Trajectory Wrapper: waiting for obstacle message...")
+        rospy.loginfo("%s Plan Trajectory Wrapper: waiting for obstacle message..." % (rospy.get_name()))
         obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
-        rospy.loginfo("Plan Trajectory Wrapper: obstacle message received.")
-        # obtain path length through rostopic
-        rospy.loginfo("Plan Trajectory Wrapper: waiting for planning path length message...")
-        path_length = rospy.wait_for_message('planning/path_length_threshold', Float64)
-        path_length = path_length.data
-        rospy.loginfo("Plan Trajectory Wrapper: planning path length received.")
-
+        rospy.loginfo("%s Plan Trajectory Wrapper: obstacle message received." % (rospy.get_name()))
+        # depending on plan type, obtain path_length from published topic or not
+        if plan_type == 'pfs':
+            # obtain path length through rostopic
+            rospy.loginfo("%s Plan Trajectory Wrapper: waiting for planning path length message..." % (rospy.get_name()))
+            path_length = rospy.wait_for_message('planning/path_length_threshold', Float64)
+            path_length = path_length.data
+            rospy.loginfo("%s Plan Trajectory Wrapper: planning path length received." % (rospy.get_name()))
+        elif plan_type == 'rr':
+            path_length = np.inf  # set a very large path length because we only want feasible paths
         # reshape
         # plan
         IsInCollision = self.IsInCollision
-        rospy.loginfo("Plan Trajectory Wrapper: start planning...")
+        rospy.loginfo("%s Plan Trajectory Wrapper: start planning..." % (rospy.get_name()))
         # create a simple setup object
         start = ob.State(self.space)
         # we can pick a random start state...
         # ... or set specific values
-        for k in range(len(start_point)):
+        for k in xrange(len(start_point)):
             start[k] = start_point[k]
         goal = ob.State(self.space)
-        for k in range(len(goal_point)):
+        for k in xrange(len(goal_point)):
             goal[k] = goal_point[k]
         def isStateValid(state):
             return not IsInCollision(state, obc)
@@ -219,16 +222,21 @@ class PlanTrajectoryWrapper(PathTools.PlanTrajectoryWrapper):
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
+        plan_time = time.time()
         solved = ss.solve(planning_time)
+        plan_time = time.time() - plan_time
         if solved:
-            rospy.loginfo("Plan Trajectory Wrapper: OMPL Planner solved successfully.")
+            rospy.loginfo("%s Plan Trajectory Wrapper: OMPL Planner solved successfully." % (rospy.get_name()))
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
             solutions = np.zeros((len(ompl_path),2))
-            for k in range(len(ompl_path)):
+            for k in xrange(len(ompl_path)):
                 solutions[k][0] = float(ompl_path[k][0])
                 solutions[k][1] = float(ompl_path[k][1])
-            return solutions.tolist()
+            return plan_time, solutions.tolist()
+        else:
+            return np.inf, None
+
 
 class ShortcutPathWrapper(PathTools.ShortcutPathWrapper):
     """
