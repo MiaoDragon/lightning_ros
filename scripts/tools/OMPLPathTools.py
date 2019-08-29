@@ -46,8 +46,12 @@ import roslib
 import rospy
 
 import threading
-import sys
-
+import sys, os
+import rospkg
+rospack = rospkg.RosPack()
+top_path = rospack.get_path('lightning')
+sys.path.insert(1, top_path+'/scripts')
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from lightning.msg import Float64Array, Float64Array2D, DrawPoints
 from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest
@@ -57,9 +61,10 @@ import PathTools
 
 from ompl import base as ob
 from ompl import geometric as og
-import plan_general
-import plan_c2d, plan_s2d, plan_r2d, plan_r3d
-import data_loader_2d, data_loader_r2d, data_loader_r3d
+from experiments.simple import plan_general
+from experiments.simple import plan_c2d, plan_s2d, plan_r2d, plan_r3d
+#from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
+from experiments.simple import utility_s2d, utility_c2d, utility_r2d, utility_r3d
 import argparse
 import pickle
 import sys

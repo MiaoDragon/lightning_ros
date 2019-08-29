@@ -1,3 +1,4 @@
+# this is for testing and compare against previous simple experiments
 cd ..
 python lightning_client.py --res_path ../../../results/simple/s2d/ --N 2 --NP 4 --data_path ../../../data/simple/s2d/ \
 --env_type s2d

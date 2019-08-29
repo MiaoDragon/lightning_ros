@@ -10,18 +10,6 @@
         <param name="env_name" value="s2d" />
         <param name="planner_name" value="rrtstar" />
         <!-- <remap from="register_planning_scene" to="/register_planning_scene" />-->
-
-        <!-- returns invalid sections of paths -->
-        <node name="collision_check_service" pkg="lightning" type="collision_check_service" output="screen">
-            <param name="num_threads" value="4" />
-        </node>
-
-        <node name="path_shortcutter_service" pkg="lightning" type="path_shortcutter" output="screen">
-            <param name="num_iterations" value="200" />
-            <param name="ignore_fraction" value="0.1" />
-        </node>
-        <!-- don't need to load planners for RR and PFS, because it is taken care of by OMPL -->
-        <!--<include file="$(find lightning)/launch/planners.launch"/>-->
         <param name="planner_config_name" value="ompl" />
 
         <!-- handles requests for RR planning -->

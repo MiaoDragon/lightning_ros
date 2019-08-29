@@ -273,9 +273,6 @@ class RRNode:
                 res.retrieved_path = [Float64Array(p) for p in retrieved]
                 res.repaired_path = [Float64Array(p) for p in repaired]
                 # added more information of the planner
-                rospy.loginfo('RR action server: total_new_node: %d' % (total_new_node))
-                rospy.loginfo('RR action server: total_new_node_NN: %d' % (total_new_node_NN))
-                rospy.loginfo("RR action server: total_num_paths_NN before returning: %d" % (total_num_paths_NN))
                 rospy.loginfo("RR action server: returning a path")
                 repair_state = STATE_FINISHED
                 self.stats_msg.return_time = time.time() - start_return

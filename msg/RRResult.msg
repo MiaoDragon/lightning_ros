@@ -3,5 +3,10 @@
 Float64Array[] retrieved_path
 #final repaired path to use
 Float64Array[] repaired_path
-
 Status status
+PlannerType retrieved_planner_type
+PlannerType repaired_planner_type
+int32 total_num_paths
+int32 total_num_paths_NN
+int32 total_new_node
+int32 total_new_node_NN
