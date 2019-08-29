@@ -201,7 +201,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         # for thread-safety, should not modify shared vars
         #self.si = ob.SpaceInformation(space)
 
-    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
+    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
         """
             Use OMPL library for planning. Obtain obstacle information from rostopic for
             collision checking
@@ -213,12 +213,15 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
         rospy.loginfo("%s Plan Trajectory Wrapper: obstacle message received." % (rospy.get_name()))
-        # obtain path length through rostopic
-        rospy.loginfo("%s Plan Trajectory Wrapper: waiting for planning path length message..." % (rospy.get_name()))
-        path_length = rospy.wait_for_message('planning/path_length_threshold', Float64)
-        path_length = path_length.data
-        rospy.loginfo("%s Plan Trajectory Wrapper: planning path length received." % (rospy.get_name()))
-
+        # depending on plan type, obtain path_length from published topic or not
+        if plan_type == 'pfs':
+            # obtain path length through rostopic
+            rospy.loginfo("%s Plan Trajectory Wrapper: waiting for planning path length message..." % (rospy.get_name()))
+            path_length = rospy.wait_for_message('planning/path_length_threshold', Float64)
+            path_length = path_length.data
+            rospy.loginfo("%s Plan Trajectory Wrapper: planning path length received." % (rospy.get_name()))
+        elif plan_type == 'rr':
+            path_length = np.inf  # set a very large path length because we only want feasible paths
         # reshape
         # plan
         IsInCollision = self.IsInCollision
@@ -259,7 +262,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         else:
             return np.inf, None
 
-    def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
+    def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
         """
           Given a start and goal point, plan by Neural Network.
 

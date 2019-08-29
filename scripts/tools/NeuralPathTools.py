@@ -216,7 +216,7 @@ class PlanTrajectoryWrapper:
 
     #planner to get new trajectory from start_point to goal_point
     #planner_number is the number received from acquire_planner
-    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
+    def plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
         """
           Given a start and goal point, plan by classical planner.
 
@@ -231,6 +231,7 @@ class PlanTrajectoryWrapper:
               correspond.
             planning_time (float): Maximum allowed time for planning, in seconds.
             planner_config_name (str): Type of planner to use.
+            plan_type (str): either pfs or rr. If rr we don't use the path length threshold.
           Return:
             list of list of float: A sequence of points representing the joint
               configurations at each point on the path.
@@ -283,7 +284,7 @@ class PlanTrajectoryWrapper:
             % (rospy.get_name(), planner_client.resolved_name))
             return plan_time, None, None
 
-    def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name):
+    def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
         """
           Given a start and goal point, plan by Neural Network.
 
@@ -298,6 +299,7 @@ class PlanTrajectoryWrapper:
               correspond.
             planning_time (float): Maximum allowed time for planning, in seconds.
             planner_config_name (str): Type of planner to use.
+            plan_type (str): either pfs or rr. If rr we don't use the path length threshold.
           Return:
             list of list of float: A sequence of points representing the joint
               configurations at each point on the path.

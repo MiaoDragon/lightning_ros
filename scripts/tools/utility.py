@@ -21,13 +21,7 @@ def save_state(net, torch_seed, np_seed, py_seed, fname):
     }
     torch.save(states, fname)
 
-def save_info(loss, total_num_paths, total_num_paths_NN, plan_time, fname):
-    states = {
-        'loss': loss,
-        'total_num_paths': total_num_paths,
-        'total_num_paths_NN': total_num_paths_NN,
-        'plan_time': plan_time
-    }
+def save_info(states, fname):
     torch.save(states, fname)
 
 def load_net_state(net, fname):

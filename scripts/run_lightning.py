@@ -182,6 +182,12 @@ class Lightning:
         self.total_num_paths = []  # this record how many paths are planned
         self.total_num_paths_NN = []   # this record how many are planned by NN
         self.time = []
+        self.plan_mode = []  # either PFS or RR
+        self.total_new_nodes = []  # total number of newly generated nodes
+        self.total_new_nodes_NN = []  # total number of newly generated nodes by NN
+        self.total_new_node = 0
+        self.total_new_node_NN = 0
+
 
     def _notify_update(self, client_name):
         if client_name == 'pfs':
@@ -303,11 +309,25 @@ class Lightning:
         # record stats
         self.total_num_paths.append(num_paths)
         self.total_num_paths_NN.append(num_NN_paths)
+        self.total_new_nodes.append(self.total_new_node)
+        self.total_new_nodes_NN.append(self.total_new_node_NN)
         self.plan_times.append(self.plan_time)
+        if retrieved_planner_type is None:
+            self.plan_mode.append(0)  # 0 for pfs, 1 for rr
+        else:
+            self.plan_mode.append(1)
         # depending on retrieved_planner_type and final_planner, train the network
         if (retrieved_planner_type is None and final_planner_type == PlannerType.NEURAL) \
             or (retrieved_planner_type == PlannerType.NEURAL and final_planner_type == PlannerType.NEURAL):
-            utility.save_info(self.losses, self.total_num_paths, self.total_num_paths_NN, self.plan_times, self.model_path+'lightning_res.pkl')
+            to_save = {}
+            to_save['loss'] = self.losses
+            to_save['total_num_paths'] = self.total_num_paths
+            to_save['total_num_paths_NN'] = self.total_num_paths_NN
+            to_save['plan_time'] = self.plan_time
+            to_save['plan_mode'] = self.plan_mode
+            to_save['total_new_node'] = self.total_new_nodes
+            to_save['total_new_node_NN'] = self.total_new_nodes_NN
+            utility.save_info(to_save, self.model_path+'lightning_res.pkl')
             return
         rospy.loginfo('Lightning: Training Neural Network...')
         # receive obstacle information
@@ -354,7 +374,15 @@ class Lightning:
 
         if self.num_path_trained % self.freq_save == 0:
             # save loss and planner type
-            utility.save_info(self.losses, self.total_num_paths, self.total_num_paths_NN, self.plan_times, self.model_path+'lightning_res.pkl')
+            to_save = {}
+            to_save['loss'] = self.losses
+            to_save['total_num_paths'] = self.total_num_paths
+            to_save['total_num_paths_NN'] = self.total_num_paths_NN
+            to_save['plan_time'] = self.plan_time
+            to_save['plan_mode'] = self.plan_mode
+            to_save['total_new_node'] = self.total_new_nodes
+            to_save['total_new_node_NN'] = self.total_new_nodes_NN
+            utility.save_info(to_save, self.model_path+'lightning_res.pkl')
 
         # write trained model to file
         utility.save_state(self.model, self.torch_seed, self.np_seed, self.py_seed, self.model_path+self.model_name)
@@ -413,6 +441,8 @@ class Lightning:
                 retrieved_path = [p.values for p in result.retrieved_path]
                 total_num_paths = result.total_num_paths
                 total_num_paths_NN = result.total_num_paths_NN
+                self.total_new_node = result.total_new_node
+                self.total_new_node_NN = result.total_new_node_NN
                 print('rr_done_cb: total_num_paths_NN: %d' % (total_num_paths_NN))
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)
@@ -478,13 +508,19 @@ class Lightning:
                 # set planning time to be the total time up to now
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
 
+                # store the number of newly generated nodes
+                self.total_new_node = result.total_new_node
+                self.total_new_node_NN = result.total_new_node_NN
+
                 # record the planned path and planner
                 self.retrieved_and_final_path = [None, None, result.planner_type.planner_type, pfsPath]
                 if result.planner_type.planner_type == PlannerType.CLASSIC:
                     self.retrieved_and_final_path += [1, 0]
+                    self.total_new_node = len(pfsPath)
                 else:
                     self.retrieved_and_final_path += [1, 1]
-
+                    self.total_new_node = len(pfsPath)
+                    self.total_new_node_NN = len(pfsPath)
 
                 self.lightning_response_ready_event.set()
                 self.done_lock.release()

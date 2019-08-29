@@ -133,7 +133,9 @@ class PFSNode:
         classic_planner_time = np.inf # set infinity so that when stopped, won't use this
         planner_number = self.plan_trajectory_wrapper.acquire_planner()
         if not self._need_to_stop():
-            classic_planner_time, ret = self.plan_trajectory_wrapper.plan_trajectory(start, goal, planner_number, self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name)
+            classic_planner_time, ret = self.plan_trajectory_wrapper.plan_trajectory(start, goal, planner_number, \
+                                self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name, \
+                                plan_type='pfs')
         self.plan_trajectory_wrapper.release_planner(planner_number)
         self._call_classic_planner_res = [classic_planner_time, ret]
         rospy.loginfo('PFS_action_server: Finished classic planning.')
@@ -158,7 +160,9 @@ class PFSNode:
         neural_planner_time = np.inf
         planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
         if not self._need_to_stop():
-            neural_planner_time, ret = self.plan_trajectory_wrapper.neural_plan_trajectory(start, goal, planner_number, self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name)
+            neural_planner_time, ret = self.plan_trajectory_wrapper.neural_plan_trajectory(start, goal, planner_number, \
+                            self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name, \
+                            plan_type='pfs')
         self.plan_trajectory_wrapper.release_neural_planner(planner_number)
         self._call_neural_planner_res = [neural_planner_time, ret]
         rospy.loginfo('PFS_action_server: Finished neural planning.')
