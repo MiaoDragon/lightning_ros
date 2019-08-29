@@ -445,6 +445,8 @@ class Lightning:
                 total_num_paths_NN = result.total_num_paths_NN
                 self.total_new_node = result.total_new_node
                 self.total_new_node_NN = result.total_new_node_NN
+                print('lightning: total_new_node: %d' % (self.total_new_node))
+                print('lightning: total_new_node_NN: %d' % (self.total_new_node_NN))
                 print('rr_done_cb: total_num_paths_NN: %d' % (total_num_paths_NN))
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)

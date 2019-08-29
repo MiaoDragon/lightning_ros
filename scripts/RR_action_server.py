@@ -370,6 +370,8 @@ class RRNode:
                 res.total_num_paths_NN = total_num_paths_NN
                 res.total_new_node = total_new_node
                 res.total_new_node_NN = total_new_node_NN
+                rospy.loginfo('RR action server: total_new_node: %d' % (total_new_node))
+                rospy.loginfo('RR action server: total_new_node_NN: %d' % (total_new_node_NN))
                 rospy.loginfo("RR action server: total_num_paths_NN before returning: %d" % (total_num_paths_NN))
                 rospy.loginfo("RR action server: returning a path")
                 repair_state = STATE_FINISHED
@@ -474,8 +476,6 @@ class RRNode:
                             total_num_paths_NN += 1
                             total_new_node += len(repairedSection)
                             total_new_node_NN += len(repairedSection)
-                        rospy.loginfo('RR action server: total_new_node: %d' % (total_new_node))
-                        rospy.loginfo('RR action server: total_new_node_NN: %d' % (total_new_node_NN))
                         rospy.loginfo('RR action server: total_num_paths_NN: %d' % (total_num_paths_NN))
                         ## TODO: returning only invalid sections that are planned by classical method, and train only on them
                         ## TODO: modify library path format to add planner type, so we can train model according to it
