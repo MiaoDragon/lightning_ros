@@ -63,7 +63,7 @@ from lightning.msg import UpdateAction, UpdateGoal
 from lightning.msg import RRAction, RRGoal, PFSAction, PFSGoal, Float64Array, StopPlanning, Stats, PlannerType
 from lightning.srv import ManagePathLibrary, ManagePathLibraryRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanResponse
-from std_msgs.msg import Float32, UInt8
+from std_msgs.msg import Float32, UInt8, Int32
 from trajectory_msgs.msg import JointTrajectoryPoint
 from tools import NeuralOMPLPathTools, NeuralPathTools
 from tools import utility
@@ -188,6 +188,8 @@ class Lightning:
         self.total_new_nodes_NN = []  # total number of newly generated nodes by NN
         self.total_new_node = 0
         self.total_new_node_NN = 0
+        self.obs = []
+        self.obs_i = []
 
 
     def _notify_update(self, client_name):
@@ -336,9 +338,16 @@ class Lightning:
         # receive obstacle information
         obs = rospy.wait_for_message('obstacles/obs', Float64Array)
         obs = obs.values
+        obs_i = rospy.wait_for_message('obstacles/obs_i', Int32)
+        obs_i = obs_i.data
+        # if it is a new obs, add to the obs list
+        if obs_i != self.obs_i[-1]:
+            self.obs_i.append(obs_i)
+            self.obs.append(obs)
+
         obs = torch.FloatTensor(obs)
 
-        dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, 0)
+        dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, obs_i)
         self.data_all += list(zip(dataset, targets, env_indices))
         self.num_trained_samples += len(targets)
         added_data = list(zip(dataset,targets,env_indices))
@@ -359,7 +368,7 @@ class Lightning:
             sample = random.sample(self.data_all, self.batch_rehersal)
             dataset, targets, env_indices = list(zip(*sample))
             dataset, targets, env_indices = list(dataset), list(targets), list(env_indices)
-            bi = np.concatenate( (obs[env_indices], dataset), axis=1).astype(np.float32)
+            bi = np.concatenate( (self.obs[env_indices], dataset), axis=1).astype(np.float32)
             bt = targets
             bi = torch.FloatTensor(bi)
             bt = torch.FloatTensor(bt)
