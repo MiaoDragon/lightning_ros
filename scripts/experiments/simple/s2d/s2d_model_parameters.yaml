@@ -17,8 +17,8 @@ learning_rate: 0.001
 server_device: 'cuda:3'
 pfs_device: 'cuda:2'
 rr_device: 'cuda:0'
-freq_rehersal: 2
-batch_rehersal: 2
+freq_rehersal: 100
+batch_rehersal: 100
 # how many trained paths before next save
 # 1 to ensure we capture all
 freq_save: 1
