@@ -341,7 +341,7 @@ class Lightning:
         obs_i = rospy.wait_for_message('obstacles/obs_i', Int32)
         obs_i = obs_i.data
         # if it is a new obs, add to the obs list
-        if obs_i != self.obs_i[-1] or len(self.obs_i) == 0:
+        if len(self.obs_i) == 0 or obs_i != self.obs_i[-1]:
             self.obs_i.append(obs_i)
             self.obs.append(obs)
 
