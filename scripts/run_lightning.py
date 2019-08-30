@@ -70,6 +70,7 @@ from tools import utility
 from experiments.simple import plan_general
 from architecture.GEM_end2end_model import End2EndMPNet
 
+import random
 import numpy as np
 import torch
 # Node names for RR and PFS plan retrieval.
