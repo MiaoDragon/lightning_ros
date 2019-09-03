@@ -88,8 +88,6 @@ def plan(args):
         obs_msg = Float64Array(obs[i])
         obs_i_msg = Int32(i)
         for j in xrange(len(paths[0])):
-            if path_lengths[i][j] == 0:
-                continue
             fp = 0 # indicator for feasibility
             print ("step: i="+str(i)+" j="+str(j))
             if path_lengths[i][j]==0:

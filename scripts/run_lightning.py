@@ -191,6 +191,15 @@ class Lightning:
         self.obs = []
         self.obs_i = []
 
+        loaded = utility.load_info(self.model_path+'lightning_res.pkl')
+        self.losses = loaded['loss']
+        self.total_num_paths = loaded['total_num_paths']
+        self.total_num_paths_NN = loaded['total_num_paths_NN']
+        self.plan_times = loaded['plan_time']
+        self.plan_mode = loaded['plan_mode']
+        self.total_new_nodes = loaded['total_new_node']
+        self.total_new_nodes_NN = laoded['total_new_node_NN']
+
 
     def _notify_update(self, client_name):
         if client_name == 'pfs':
