@@ -252,6 +252,10 @@ class Lightning:
             response.motion_plan_response.error_code.val = response.motion_plan_response.error_code.PLANNING_FAILED
             return response
         s, g = start_and_goal
+        print('start')
+        print(s)
+        print('goal')
+        print(g)
 
         self.rr_returned, self.pfs_returned = False, False
         self.lightning_response = None
