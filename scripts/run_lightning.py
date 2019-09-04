@@ -198,7 +198,7 @@ class Lightning:
         self.plan_times = loaded['plan_time']
         self.plan_mode = loaded['plan_mode']
         self.total_new_nodes = loaded['total_new_node']
-        self.total_new_nodes_NN = laoded['total_new_node_NN']
+        self.total_new_nodes_NN = loaded['total_new_node_NN']
 
 
     def _notify_update(self, client_name):
