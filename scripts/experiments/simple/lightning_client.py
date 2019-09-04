@@ -95,6 +95,7 @@ def plan(args):
                 fp = 0
                 valid_path.append(0)
             else:
+                print(paths[i][j])
                 valid_path.append(1)
                 # obtaining the length threshold for planning
                 data_length = 0.
