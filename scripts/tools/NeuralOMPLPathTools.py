@@ -235,10 +235,6 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         goal = ob.State(self.space)
         for k in xrange(len(goal_point)):
             goal[k] = goal_point[k]
-        print('start:')
-        print(start)
-        print('end')
-        print(goal)
         def isStateValid(state):
             return not IsInCollision(state, obc)
         si = ob.SpaceInformation(self.space)
@@ -258,10 +254,10 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             rospy.loginfo("%s Plan Trajectory Wrapper: OMPL Planner solved successfully." % (rospy.get_name()))
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
-            solutions = np.zeros((len(ompl_path),2))
+            solutions = np.zeros((len(ompl_path),len(start)))
             for k in xrange(len(ompl_path)):
-                solutions[k][0] = float(ompl_path[k][0])
-                solutions[k][1] = float(ompl_path[k][1])
+                for idx in xrange(len(start)):
+                    solutions[k][idx] = float(ompl_path[k][idx])
             return plan_time, solutions.tolist()
         else:
             return np.inf, None
