@@ -387,6 +387,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
         original_path = np.array(original_path)
+        print(original_path)
         rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
         path = plan_general.lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
         path = np.array(path).tolist()
