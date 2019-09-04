@@ -72,12 +72,14 @@ def plan(args):
     valid_env = []
     total_path_length = 0
     avg_ct = 0
+    print(len(path_lengths))
+    print(len(path_lengths[0]))
     for i in range(len(path_lengths)):
         for j in range(len(path_lengths[0])):
             if path_lengths[i][j] != 0:
                 total_path_length += path_lengths[i][j]
                 avg_ct += 1
-    print(total_path_length / avg_ct)
+    print(float(total_path_length) / avg_ct)
 parser = argparse.ArgumentParser()
 parser.add_argument('--res_path', type=str, default='../lightning_res/')
 parser.add_argument('--env_idx', type=int, default=0, help='from which env')
