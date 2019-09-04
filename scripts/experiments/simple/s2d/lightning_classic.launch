@@ -4,4 +4,7 @@
   <param name="/lightning/robot_name" value="point_s2d" />
   <param name="/lightning/env_name" value="s2d" />
   <param name="/lightning/planner_name" value="rrtstar" />
+  <rosparam command='load' file='$(find lightning)/scripts/experiments/simple/s2d/s2d_model_parameters.yaml' ns='/lightning/model' subst_value='True'>
+    <!-- ROS parameters for Neural Network -->
+  </rosparam>
 </launch>
