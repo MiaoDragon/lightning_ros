@@ -238,7 +238,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         print('start:')
         print(start)
         print('end')
-        print(end)
+        print(goal)
         def isStateValid(state):
             return not IsInCollision(state, obc)
         si = ob.SpaceInformation(self.space)
