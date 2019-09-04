@@ -191,7 +191,7 @@ class Lightning:
         self.obs = []
         self.obs_i = []
 
-        if not os.path.isfile(self.model_path+'lightning_res.pkl'):
+        if os.path.isfile(self.model_path+'lightning_res.pkl'):
             loaded = utility.load_info(self.model_path+'lightning_res.pkl')
             self.losses = loaded['loss']
             self.total_num_paths = loaded['total_num_paths']
