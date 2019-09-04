@@ -235,6 +235,10 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         goal = ob.State(self.space)
         for k in xrange(len(goal_point)):
             goal[k] = goal_point[k]
+        print('start:')
+        print(start)
+        print('end')
+        print(end)
         def isStateValid(state):
             return not IsInCollision(state, obc)
         si = ob.SpaceInformation(self.space)
