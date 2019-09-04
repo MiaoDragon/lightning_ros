@@ -1,7 +1,7 @@
 <!-- loading lightning launch file, and set parameters -->
 <launch>
   <include file="$(find lightning)/launch/lightning_neural_OMPL.launch"/>
-  <param name="robot_name" value="point_r3d" />
+  <param name="/lightning/robot_name" value="point_r3d" />
   <param name="/lightning/env_name" value="r3d" />
   <param name="/lightning/planner_name" value="rrtstar" />
 </launch>
