@@ -159,6 +159,9 @@ class PFSNode:
         ret = None
         neural_planner_time = np.inf
         planner_number = self.plan_trajectory_wrapper.acquire_neural_planner()
+        # get a smaller planning_time with our default threshold
+        default_planning_time = 2.
+        planning_time = min(planning_time, default_planning_time)
         if not self._need_to_stop():
             neural_planner_time, ret = self.plan_trajectory_wrapper.neural_plan_trajectory(start, goal, planner_number, \
                             self.current_joint_names, self.current_group_name, planning_time, self.planner_config_name, \
