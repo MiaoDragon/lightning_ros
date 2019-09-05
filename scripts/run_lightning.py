@@ -469,11 +469,12 @@ class Lightning:
                 print('lightning: total_new_node: %d' % (self.total_new_node))
                 print('lightning: total_new_node_NN: %d' % (self.total_new_node_NN))
                 print('rr_done_cb: total_num_paths_NN: %d' % (total_num_paths_NN))
+                print('rr_done_cb: planning time: %f' % (time.time() - self.start_time))
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)
                 if self.publish_stats:
                   stat_msg.shortcut_time = time.time() - shortcut_start
-
+                print('rr_done_cb: shortcut time: %f' % (time.time() - shortcut_start))
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
                 # set planning time to be the total time up to now
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
@@ -501,6 +502,7 @@ class Lightning:
                   stat_msg.time = time.time() - self.start_time
                   stat_msg.rr_won = True
                   self.stat_pub.publish(stat_msg)
+                print('rr_done_cb: total time: %f' % (time.time() - self.start_time))
                 return
         else:
             rospy.loginfo("Lightning: Call to RR did not return a path")
@@ -519,6 +521,7 @@ class Lightning:
           stat_msg = Stats()
           stat_msg.rr_won = False
           stat_msg.plan_time = time.time() - self.start_time
+        print('pfs_done_cb: plan time: %f' % (time.time() - self.start_time))
         if result.status.status == result.status.SUCCESS:
             if not self.rr_returned or self.lightning_response is None:
                 self._send_stop_rr_planning()
@@ -528,6 +531,7 @@ class Lightning:
                 shortcut = self.shortcut_path_wrapper.shortcut_path(pfsPath, self.current_group_name)
                 if self.publish_stats:
                   stat_msg.shortcut_time = time.time() - shortcut_start
+                print('pfs_done_cb: shortcut time: %f' % (time.time() - shortcut_start))
 
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
                 # set planning time to be the total time up to now
@@ -561,6 +565,7 @@ class Lightning:
                 if self.publish_stats:
                   stat_msg.time = time.time() - self.start_time
                   self.stat_pub.publish(stat_msg)
+                print('pfs_done_cb: total time: %f' % (time.time() - self.start_time))
                 return
         else:
             rospy.loginfo("Lightning: Call to PFS did not return a path")
