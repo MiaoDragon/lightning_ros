@@ -458,7 +458,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
                 for j in range(len(path)-1,i+1,-1):
                     ind=0
                     ind=motionVal.checkMotion(states[state_idx[i]](), states[state_idx[j]]())
-                    if ind==1:
+                    if ind==True:
                         pc=[]
                         new_state_idx = []
                         for k in range(0,i+1):
