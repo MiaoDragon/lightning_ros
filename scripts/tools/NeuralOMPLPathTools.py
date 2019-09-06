@@ -455,7 +455,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         # simplify by LVC
         path_ompl_states = path_ompl.getStates()
         solutions = np.zeros((len(path_ompl_states), len(path[0])))
-        pathSimplifier(path_ompl)
+        pathSimplifier.collapseCloseVertices(path_ompl)
         path_ompl = path_ompl.getStates()
         for i in xrange(len(path_ompl)):
             for j in xrange(len(path[0])):
