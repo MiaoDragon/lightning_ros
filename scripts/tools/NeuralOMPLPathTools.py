@@ -243,7 +243,6 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         pdef = ob.ProblemDefinition(si)
         pdef.setStartAndGoalStates(start, goal)
         pdef.setOptimizationObjective(getPathLengthObjective(si, path_length))
-        print('allowed planning time in classical: %f' % (planning_time))
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
@@ -457,12 +456,9 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         path_ompl_states = path_ompl.getStates()
         solutions = np.zeros((len(path_ompl_states), len(path[0])))
         pathSimplifier.collapseCloseVertices(path_ompl)
-        #path_ompl = path_ompl.getStates()
-        print("got the states for path smoothed")
         for i in xrange(path_ompl.getStateCount()):
             for j in xrange(len(path[0])):
                 solutions[i][j] = float(path_ompl.getState(i)[j])
-        print('set up the solutions')
         return solutions
 
 
