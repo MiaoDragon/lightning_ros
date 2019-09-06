@@ -467,7 +467,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
                             pc.append(path[k])
                         return lvc(pc)
             return path
-        path = lvc(original_path, states)
+        path = lvc(original_path)
         return path
         """
         pathSimplifier = og.PathSimplifier(si)
