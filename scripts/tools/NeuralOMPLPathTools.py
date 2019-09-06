@@ -335,14 +335,14 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             print('Neural Planner: lvc time: %f' % (time.time() - lvc_start))
             feasible_check_time = time.time()
             # check feasibility using OMPL
-            path = og.PathGeometric(si)
+            path_ompl = og.PathGeometric(si)
             for i in range(len(path)):
                 state = ob.State(self.space)
                 for j in range(len(path[i])):
                     state[j] = path[i][j].item()
-                path.append(state)
+                path_ompl.append(state)
             #path.check()
-            if path.check():
+            if path_ompl.check():
                 #if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
                 print('Neural Planner: feasibility check time: %f' % (time.time() - feasible_check_time))
