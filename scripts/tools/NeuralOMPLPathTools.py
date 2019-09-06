@@ -375,23 +375,42 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
             #data_loader = data_loader_2d
             IsInCollision = plan_s2d.IsInCollision
             # create an SE2 state space
-            time_limit = 20.
+            space = ob.RealVectorStateSpace(2)
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'c2d':
             #data_loader = data_loader_2d
             IsInCollision = plan_c2d.IsInCollision
             # create an SE2 state space
-            time_limit = 10.
+            space = ob.RealVectorStateSpace(2)
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'r2d':
             #data_loader = data_loader_r2d
             IsInCollision = plan_r2d.IsInCollision
             # create an SE2 state space
-            time_limit = 50.
+            space = ob.SE2StateSpace()
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'r3d':
             #data_loader = data_loader_r3d
             IsInCollision = plan_r3d.IsInCollision
             # create an SE2 state space
-            time_limit = 20.
+            space = ob.RealVectorStateSpace(3)
+            bounds = ob.RealVectorBounds(3)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         self.IsInCollision = IsInCollision
+        self.space = space
+        # for thread-safety, should not modify shared vars
+        #self.si = ob.SpaceInformation(space)
 
     def shortcut_path(self, original_path, group_name):
         """
@@ -411,12 +430,36 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
-        original_path = np.array(original_path)
-        print(original_path)
+        #original_path = np.array(original_path)
+        #print(original_path)
+        #rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
+        #path = plan_general.lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
+        #path = np.array(path).tolist()
+
+        # try using OMPL method for shortcutting
+        def isStateValid(state):
+            return not IsInCollision(state, obc)
+        si = ob.SpaceInformation(self.space)
+        si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+        si.setup()
+        pathSimplifier = og.PathSimplifier(si)
         rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
-        path = plan_general.lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
-        path = np.array(path).tolist()
-        return path
+        path = original_path
+        path_ompl = og.PathGeometric(si)
+        for i in range(len(path)):
+            state = ob.State(self.space)
+            for j in range(len(path[i])):
+                state[j] = path[i][j]
+            sref = state()  # a reference to the state
+            path_ompl.append(sref)
+        # simplify by LVC
+        solutions = np.zeros((len(path_ompl), len(path[0])))
+        pathSimplifier(path_ompl)
+        for i in xrange(len(path_ompl)):
+            for j in xrange(len(path[0])):
+                solutions[i][j] = float(path_ompl[i][j])
+        return solutions
+
 
 class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
     """
