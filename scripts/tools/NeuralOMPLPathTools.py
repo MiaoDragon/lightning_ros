@@ -243,7 +243,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         pdef = ob.ProblemDefinition(si)
         pdef.setStartAndGoalStates(start, goal)
         pdef.setOptimizationObjective(getPathLengthObjective(si, path_length))
-
+        print('allowed planning time in classical: %f' % (planning_time))
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
