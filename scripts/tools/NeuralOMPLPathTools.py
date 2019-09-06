@@ -459,6 +459,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         pathSimplifier.collapseCloseVertices(path_ompl)
         path_ompl = path_ompl.getStates()
         print("got the states for path smoothed")
+        print(path_ompl)
         for i in xrange(len(path_ompl)):
             for j in xrange(len(path[0])):
                 solutions[i][j] = float(path_ompl[i][j])
