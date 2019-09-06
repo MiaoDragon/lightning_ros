@@ -320,11 +320,17 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
                                     self.normalize_func, self.unnormalize_func, t==0, step_sz=step_sz, \
                                     time_flag=time_flag, device=self.device)
                 time_norm = 0
+            # print lvc time
+            print('Neural Planner: path length: %d' % (len(path)))
+            lvc_start = time.time()
             path = plan_general.lvc(path, obc, IsInCollision, step_sz=step_sz)
+            print('Neural Planner: lvc time: %f' % (time.time() - lvc_start))
+            feasible_check_time = time.time()
             if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
                 rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
                 break
+            print('Neural Planner: feasibility check time: %f' % (time.time() - feasible_check_time))
             if time.time() - plan_time >= planning_time:
                 # we can't allow the planner to go too long
                 break
