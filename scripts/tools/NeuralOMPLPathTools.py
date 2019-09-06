@@ -445,29 +445,31 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         # use motionValidator
         motionVal = ob.DiscreteMotionValidator(si)
         path = original_path
-        def lvc(path):
-            states = []
-            for i in range(len(path)):
-                state = ob.State(self.space)
-                for j in range(len(path[i])):
-                    state[j] = path[i][j]
-                states.append(state)
+        states = []
+        for i in range(len(path)):
+            state = ob.State(self.space)
+            for j in range(len(path[i])):
+                state[j] = path[i][j]
+            states.append(state)
+        state_idx = list(range(len(states)))
+        def lvc(path, state_idx):
+            # state idx: map from path idx -> state idx
             for i in range(0,len(path)-1):
                 for j in range(len(path)-1,i+1,-1):
                     ind=0
-                    print('checking motion...')
-                    print('(%f, %f, %f) -> (%f, %f, %f)' % (path[i][0],path[i][1],path[i][2],path[j][0],path[j][1],path[j][2]))
-                    ind=motionVal.checkMotion(states[i](), states[j]())
-                    print('after checking...')
+                    ind=motionVal.checkMotion(states[state_idx[i]](), states[state_idx[j]]())
                     if ind==1:
                         pc=[]
+                        new_state_idx = []
                         for k in range(0,i+1):
                             pc.append(path[k])
+                            new_state_idx.append(state_idx[k])
                         for k in range(j,len(path)):
                             pc.append(path[k])
-                        return lvc(pc)
+                            new_state_idx.append(state_idx[k])
+                        return lvc(pc, new_state_idx)
             return path
-        path = lvc(original_path)
+        path = lvc(original_path, state_idx)
         return path
         """
         pathSimplifier = og.PathSimplifier(si)
