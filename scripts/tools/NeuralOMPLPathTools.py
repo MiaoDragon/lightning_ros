@@ -451,11 +451,14 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
             for j in range(len(path[i])):
                 state[j] = path[i][j]
             states.append(state())
+        print('after appending states...')
         def lvc(path, states):
             for i in range(0,len(path)-1):
                 for j in range(len(path)-1,i+1,-1):
                     ind=0
+                    print('checking motion...')
                     ind=motionVal.checkMotion(states[i], states[j])
+                    print('after checking...')
                     if ind==1:
                         pc=[]
                         new_states = []
@@ -464,7 +467,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
                             new_states.append(states[k])
                         for k in range(j,len(path)):
                             pc.append(path[k])
-                            new_states.append(tates[k])
+                            new_states.append(states[k])
                         return lvc(pc, new_states)
             return path
         path = lvc(original_path, states)
