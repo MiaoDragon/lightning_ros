@@ -445,34 +445,27 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         # use motionValidator
         motionVal = ob.DiscreteMotionValidator(si)
         path = original_path
-        states = []
-        for i in range(len(path)):
-            state = ob.State(self.space)
-            for j in range(len(path[i])):
-                state[j] = path[i][j]
-            states.append(state())
-        print('after appending states...')
-        def lvc(path, states):
+        def lvc(path):
+            states = []
+            for i in range(len(path)):
+                state = ob.State(self.space)
+                for j in range(len(path[i])):
+                    state[j] = path[i][j]
+                states.append(state())
             for i in range(0,len(path)-1):
                 for j in range(len(path)-1,i+1,-1):
                     ind=0
                     print('checking motion...')
-                    print(states)
-                    print(states[i].values)
-                    print(states[j].values)
                     #print('(%f, %f, %f) -> (%f, %f, %f)' % (states[i][0],states[i][1],states[i][2],states[j][0],states[j][1],states[j][2]))
                     ind=motionVal.checkMotion(states[i], states[j])
                     print('after checking...')
                     if ind==1:
                         pc=[]
-                        new_states = []
                         for k in range(0,i+1):
                             pc.append(path[k])
-                            new_states.append(states[k])
                         for k in range(j,len(path)):
                             pc.append(path[k])
-                            new_states.append(states[k])
-                        return lvc(pc, new_states)
+                        return lvc(pc)
             return path
         path = lvc(original_path, states)
         return path
