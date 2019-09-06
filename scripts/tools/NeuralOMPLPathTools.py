@@ -442,6 +442,34 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         si = ob.SpaceInformation(self.space)
         si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
         si.setup()
+        # use motionValidator
+        motionVal = ob.motionValidator(si)
+        path = original_path
+        states = []
+        for i in range(len(path)):
+            state = ob.State(self.space)
+            for j in range(len(path[i])):
+                state[j] = path[i][j]
+            states.append(state())
+        def lvc(path, states):
+            for i in range(0,len(path)-1):
+                for j in range(len(path)-1,i+1,-1):
+                    ind=0
+                    ind=motionVal.checkMotion(states[i], states[j])
+                    if ind==1:
+                        pc=[]
+                        new_states = []
+                        for k in range(0,i+1):
+                            pc.append(path[k])
+                            new_states.append(states[k])
+                        for k in range(j,len(path)):
+                            pc.append(path[k])
+                            new_states.append(tates[k])
+                        return lvc(pc, new_states)
+            return path
+        path = lvc(original_path, states)
+        return path
+        """
         pathSimplifier = og.PathSimplifier(si)
         rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
         path = original_path
@@ -459,6 +487,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         for i in xrange(path_ompl.getStateCount()):
             for j in xrange(len(path[0])):
                 solutions[i][j] = float(path_ompl.getState(i)[j])
+        """
         return solutions
 
 
