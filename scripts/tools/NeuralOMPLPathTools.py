@@ -328,6 +328,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             feasible_check_time = time.time()
             if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
+                print('Neural Planner: feasibility check time: %f' % (time.time() - feasible_check_time))
                 rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
                 break
             print('Neural Planner: feasibility check time: %f' % (time.time() - feasible_check_time))
