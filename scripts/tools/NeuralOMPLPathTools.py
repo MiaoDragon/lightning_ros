@@ -456,13 +456,13 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         # simplify by LVC
         path_ompl_states = path_ompl.getStates()
         solutions = np.zeros((len(path_ompl_states), len(path[0])))
-        print('before simplifier')
         pathSimplifier.collapseCloseVertices(path_ompl)
-        print('after simplifier')
         path_ompl = path_ompl.getStates()
+        print("got the states for path smoothed")
         for i in xrange(len(path_ompl)):
             for j in xrange(len(path[0])):
                 solutions[i][j] = float(path_ompl[i][j])
+        print('set up the solutions')
         return solutions
 
 
