@@ -35,7 +35,7 @@ def steerTo(start, end, obc, IsInCollision, step_sz=DEFAULT_STEP):
         # then is torch tensor
         delta = delta.numpy()
     # instead of using Euclidean distance, use the l1-norm
-    total_dist = delta.absolute().max()
+    total_dist = np.absolute(delta).max()
     #total_dist = np.linalg.norm(delta)
     # obtain the number of segments (start to end-1)
     # the number of nodes including start and end is actually num_segs+1
