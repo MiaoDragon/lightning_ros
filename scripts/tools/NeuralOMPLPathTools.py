@@ -458,7 +458,9 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
                     ind=0
                     print('checking motion...')
                     print(states)
-                    print('(%f, %f, %f) -> (%f, %f, %f)' % (states[i][0],states[i][1],states[i][2],states[j][0],states[j][1],states[j][2]))
+                    print(states[i].values)
+                    print(states[j].values)
+                    #print('(%f, %f, %f) -> (%f, %f, %f)' % (states[i][0],states[i][1],states[i][2],states[j][0],states[j][1],states[j][2]))
                     ind=motionVal.checkMotion(states[i], states[j])
                     print('after checking...')
                     if ind==1:
