@@ -451,12 +451,12 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
                 state = ob.State(self.space)
                 for j in range(len(path[i])):
                     state[j] = path[i][j]
-                states.append(state())
+                states.append(state)
             for i in range(0,len(path)-1):
                 for j in range(len(path)-1,i+1,-1):
                     ind=0
                     print('checking motion...')
-                    #print('(%f, %f, %f) -> (%f, %f, %f)' % (states[i][0],states[i][1],states[i][2],states[j][0],states[j][1],states[j][2]))
+                    print('(%f, %f, %f) -> (%f, %f, %f)' % (path[i][0],path[i][1],path[i][2],path[j][0],path[j][1],path[j][2]))
                     ind=motionVal.checkMotion(states[i], states[j])
                     print('after checking...')
                     if ind==1:
