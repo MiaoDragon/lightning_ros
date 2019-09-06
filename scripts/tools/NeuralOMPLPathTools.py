@@ -437,6 +437,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         #path = np.array(path).tolist()
 
         # try using OMPL method for shortcutting
+        IsInCollision = self.IsInCollision
         def isStateValid(state):
             return not IsInCollision(state, obc)
         si = ob.SpaceInformation(self.space)
