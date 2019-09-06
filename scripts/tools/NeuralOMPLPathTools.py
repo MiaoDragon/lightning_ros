@@ -340,7 +340,8 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
                 state = ob.State(self.space)
                 for j in range(len(path[i])):
                     state[j] = path[i][j].item()
-                path_ompl.append(state)
+                sref = state()  # a reference to the state
+                path_ompl.append(sref)
             #path.check()
             if path_ompl.check():
                 #if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
