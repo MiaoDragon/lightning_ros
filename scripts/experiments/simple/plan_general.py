@@ -65,6 +65,7 @@ def feasibility_check(path, obc, IsInCollision, step_sz=DEFAULT_STEP):
     # checks the feasibility of entire path including the path edges
     # by checking for each adjacent vertices
     print('inside feasible check: path length: %d' % (len(path)))
+    print(path)
     for i in range(0,len(path)-1):
         if not steerTo(path[i],path[i+1],obc,IsInCollision,step_sz=step_sz):
             # collision occurs from adjacent vertices
