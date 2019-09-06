@@ -482,10 +482,12 @@ class Lightning:
                 self.retrieved_and_final_path = [result.retrieved_planner_type.planner_type, None, \
                                                  result.repaired_planner_type.planner_type, rr_path, \
                                                  total_num_paths, total_num_paths_NN]
-
+                # record the planning time
+                self.plan_time = time.time() - self.start_time
                 self.lightning_response_ready_event.set()
                 self.done_lock.release()
 
+                print('rr_done_cb: total time: %f' % (time.time() - self.start_time))
                 #display new path in rviz
                 if self.draw_points:
                     self.draw_points_wrapper.draw_points(rr_path, self.current_group_name, "final", DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREEN, 0.1)
@@ -496,13 +498,11 @@ class Lightning:
                     self._special_print("Lightning: Got a path from RR, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from RR")
-                # record the planning time
-                self.plan_time = time.time() - self.start_time
+
                 if self.publish_stats:
                   stat_msg.time = time.time() - self.start_time
                   stat_msg.rr_won = True
                   self.stat_pub.publish(stat_msg)
-                print('rr_done_cb: total time: %f' % (time.time() - self.start_time))
                 return
         else:
             rospy.loginfo("Lightning: Call to RR did not return a path")
@@ -549,6 +549,8 @@ class Lightning:
                     self.total_new_node = len(pfsPath)
                     self.total_new_node_NN = len(pfsPath)
 
+                self.plan_time = time.time() - self.start_time
+                print('pfs_done_cb: total time: %f' % (time.time() - self.start_time))
                 self.lightning_response_ready_event.set()
                 self.done_lock.release()
 
@@ -561,11 +563,9 @@ class Lightning:
                     self._special_print("Lightning: Got a path from PFS, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from PFS")
-                self.plan_time = time.time() - self.start_time
                 if self.publish_stats:
                   stat_msg.time = time.time() - self.start_time
                   self.stat_pub.publish(stat_msg)
-                print('pfs_done_cb: total time: %f' % (time.time() - self.start_time))
                 return
         else:
             rospy.loginfo("Lightning: Call to PFS did not return a path")
