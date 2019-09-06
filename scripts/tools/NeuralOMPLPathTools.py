@@ -443,7 +443,7 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
         si.setup()
         # use motionValidator
-        motionVal = ob.MotionValidator(si)
+        motionVal = ob.DiscreteMotionValidator(si)
         path = original_path
         states = []
         for i in range(len(path)):
