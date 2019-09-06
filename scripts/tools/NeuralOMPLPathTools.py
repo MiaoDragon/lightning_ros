@@ -451,28 +451,28 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
             for j in range(len(path[i])):
                 state[j] = path[i][j]
             states.append(state())
+        state_idx = list(range(len(states)))
         print('after appending states...')
-        def lvc(path, states):
+        def lvc(path, state_idx):
             for i in range(0,len(path)-1):
                 for j in range(len(path)-1,i+1,-1):
                     ind=0
                     print('checking motion...')
-                    print(states)
-                    print('(%f, %f, %f) -> (%f, %f, %f)' % (states[i].getX(),states[i].getY(),states[i].getZ(),states[j].getX(),states[j].getY(),states[j].getZ()))
-                    ind=motionVal.checkMotion(states[i], states[j])
+                    #print('(%f, %f, %f) -> (%f, %f, %f)' % (states[i].getX(),states[i].getY(),states[i].getZ(),states[j].getX(),states[j].getY(),states[j].getZ()))
+                    ind=motionVal.checkMotion(states[state_idx[i]], states[state_idx[j]])
                     print('after checking...')
                     if ind==1:
                         pc=[]
-                        new_states = []
+                        new_state_idx = []
                         for k in range(0,i+1):
                             pc.append(path[k])
-                            new_states.append(states[k])
+                            new_state_idx.append(state_idx[k])
                         for k in range(j,len(path)):
                             pc.append(path[k])
-                            new_states.append(states[k])
-                        return lvc(pc, new_states)
+                            new_state_idx.append(state_idx[k])
+                        return lvc(pc, new_state_idx)
             return path
-        path = lvc(original_path, states)
+        path = lvc(original_path, state_idx)
         return path
         """
         pathSimplifier = og.PathSimplifier(si)
