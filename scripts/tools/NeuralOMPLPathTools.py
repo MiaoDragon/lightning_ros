@@ -303,6 +303,11 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         time_flag = False
         fp = 0
         plan_time = time.time()
+
+        si = ob.SpaceInformation(self.space)
+        si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+        si.setup()
+
         for t in xrange(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
@@ -326,7 +331,16 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             path = plan_general.lvc(path, obc, IsInCollision, step_sz=step_sz)
             print('Neural Planner: lvc time: %f' % (time.time() - lvc_start))
             feasible_check_time = time.time()
-            if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
+            # check feasibility using OMPL
+            path = og.PathGeometric(si)
+            for i in range(len(path)):
+                state = ob.State(self.space)
+                for j in range(len(path[i])):
+                    state[j] = path[i][j].item()
+                path.append(state)
+            #path.check()
+            if path.check():
+                #if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
                 print('Neural Planner: feasibility check time: %f' % (time.time() - feasible_check_time))
                 rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
