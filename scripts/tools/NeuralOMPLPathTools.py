@@ -304,6 +304,9 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         fp = 0
         plan_time = time.time()
 
+
+        def isStateValid(state):
+            return not IsInCollision(state, obc)
         si = ob.SpaceInformation(self.space)
         si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
         si.setup()
