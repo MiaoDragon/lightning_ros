@@ -226,7 +226,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         # reshape
         # plan
         IsInCollision = self.IsInCollision
-        rospy.loginfo("%s Plan Trajectory Wrapper: receiving message takes time: %f" % (rospy.get_name(), time.time() - start))        
+        rospy.loginfo("%s Plan Trajectory Wrapper: receiving message takes time: %f" % (rospy.get_name(), time.time() - start))
         rospy.loginfo("%s Plan Trajectory Wrapper: start planning..." % (rospy.get_name()))
         # create a simple setup object
         start = ob.State(self.space)
@@ -255,6 +255,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             rospy.loginfo("%s Plan Trajectory Wrapper: OMPL Planner solved successfully." % (rospy.get_name()))
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
+            rospy.loginfo("%s Plan Trajectory Wrapper: path length: %d" % (rospy.get_name(), len(ompl_path)))
             solutions = np.zeros((len(ompl_path),len(start_point)))
             for k in xrange(len(ompl_path)):
                 for idx in xrange(len(start_point)):
