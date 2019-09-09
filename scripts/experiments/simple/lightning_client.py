@@ -88,6 +88,8 @@ def plan(args):
         obs_msg = Float64Array(obs[i])
         obs_i_msg = Int32(i)
         for j in xrange(len(paths[0])):
+            if path_lengths[i][j] == 0:
+                continue
             fp = 0 # indicator for feasibility
             print ("step: i="+str(i)+" j="+str(j))
             if path_lengths[i][j]==0:
@@ -159,6 +161,7 @@ def plan(args):
         print('average test time up to now: %f' % (np.mean(time_total)))
         fes_env.append(fes_path)
         valid_env.append(valid_path)
+        print(np.sum(np.array(fes_env)))
         print('accuracy up to now: %f' % (float(np.sum(np.array(fes_env))) / np.sum(np.array(valid_env))))
     pickle.dump(time_env, open(args.res_path+'time.p', "wb" ))
     f = open(os.path.join(args.res_path,'accuracy.txt'), 'w')

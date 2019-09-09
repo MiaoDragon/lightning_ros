@@ -1,0 +1,24 @@
+mlp_arch_path: 'architecture.model_baxter'
+cae_arch_path: 'architecture.AE.CAE_baxter'
+model_path: '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/results/baxter/'
+model_name: 'model_baxter.pkl'
+normalizer_path: 'experiments.baxter.utility_baxter'
+world_size: [3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67]
+total_input_size: 16067
+AE_input_size: 16053
+mlp_input_size: 74
+output_size: 7
+n_tasks: 1
+n_memories: 10000
+memory_strength: 0.5
+grad_step: 1
+opt_type: 'Adagrad'
+learning_rate: 0.001
+server_device: 'cpu'
+pfs_device: 'cpu'
+rr_device: 'cpu'
+freq_rehersal: 100
+batch_rehersal: 100
+# how many trained paths before next save
+# 1 to ensure we capture all
+freq_save: 1

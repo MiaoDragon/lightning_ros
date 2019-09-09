@@ -24,6 +24,7 @@ def save_state(net, torch_seed, np_seed, py_seed, fname):
 def load_info(fname):
     return torch.load(fname)
 
+
 def save_info(states, fname):
     torch.save(states, fname)
 

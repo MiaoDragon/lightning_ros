@@ -62,7 +62,7 @@ import NeuralPathTools
 from architecture.GEM_end2end_model import End2EndMPNet
 from ompl import base as ob
 from ompl import geometric as og
-from experiments.simple import plan_general
+from tools import plan_general
 from experiments.simple import plan_c2d, plan_s2d, plan_r2d, plan_r3d
 #from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
 from experiments.simple import utility_s2d, utility_c2d, utility_r2d, utility_r3d
@@ -207,7 +207,6 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             collision checking
         """
         # obtain obstacle information through rostopic
-        start = time.time()
         rospy.loginfo("%s Plan Trajectory Wrapper: waiting for obstacle message..." % (rospy.get_name()))
         obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
@@ -226,7 +225,6 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         # reshape
         # plan
         IsInCollision = self.IsInCollision
-        rospy.loginfo("%s Plan Trajectory Wrapper: receiving message takes time: %f" % (rospy.get_name(), time.time() - start))
         rospy.loginfo("%s Plan Trajectory Wrapper: start planning..." % (rospy.get_name()))
         # create a simple setup object
         start = ob.State(self.space)
@@ -245,6 +243,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         pdef = ob.ProblemDefinition(si)
         pdef.setStartAndGoalStates(start, goal)
         pdef.setOptimizationObjective(getPathLengthObjective(si, path_length))
+
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
@@ -256,10 +255,10 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
             rospy.loginfo("%s Plan Trajectory Wrapper: path length: %d" % (rospy.get_name(), len(ompl_path)))
-            solutions = np.zeros((len(ompl_path),len(start_point)))
+            solutions = np.zeros((len(ompl_path),2))
             for k in xrange(len(ompl_path)):
-                for idx in xrange(len(start_point)):
-                    solutions[k][idx] = float(ompl_path[k][idx])
+                solutions[k][0] = float(ompl_path[k][0])
+                solutions[k][1] = float(ompl_path[k][1])
             return plan_time, solutions.tolist()
         else:
             return np.inf, None
@@ -306,12 +305,13 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         fp = 0
         plan_time = time.time()
 
-
         def isStateValid(state):
             return not IsInCollision(state, obc)
         si = ob.SpaceInformation(self.space)
         si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
         si.setup()
+
+
 
         for t in xrange(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
@@ -348,10 +348,8 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             if path_ompl.check():
                 #if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
-                print('Neural Planner: feasibility check time: %f' % (time.time() - feasible_check_time))
                 rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
                 break
-            print('Neural Planner: feasibility check time: %f' % (time.time() - feasible_check_time))
             if time.time() - plan_time >= planning_time:
                 # we can't allow the planner to go too long
                 break
@@ -417,12 +415,10 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
     def shortcut_path(self, original_path, group_name):
         """
           Shortcuts a path, where the path is for a given group name.
-
           Args:
             original_path (list of list of float): The path, represented by
               a list of individual joint configurations.
             group_name (str): The group for which the path was created.
-
           Return:
             list of list of float: The shortcutted version of the path.
         """
@@ -494,7 +490,6 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
                 solutions[i][j] = float(path_ompl.getState(i)[j])
         """
         return solutions
-
 
 class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
     """

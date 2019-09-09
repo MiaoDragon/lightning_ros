@@ -67,9 +67,8 @@ from std_msgs.msg import Float32, UInt8, Int32
 from trajectory_msgs.msg import JointTrajectoryPoint
 from tools import NeuralOMPLPathTools, NeuralPathTools
 from tools import utility
-from experiments.simple import plan_general
+from tools import plan_general
 from architecture.GEM_end2end_model import End2EndMPNet
-
 import random
 import numpy as np
 import torch
@@ -85,6 +84,7 @@ LIGHTNING_SERVICE = "lightning_get_path"
 SET_PLANNING_SCENE_DIFF_NAME = "/get_planning_scene";
 # Service name for managing path library.
 MANAGE_LIBRARY = "manage_path_library"
+PLANNING_SCENE_SERV_NAME = "/get_planning_scene";
 
 # Topic to publish to for updating the neural network
 # UPDATE_TOPIC = 'model_update'
@@ -190,6 +190,7 @@ class Lightning:
         self.total_new_node_NN = 0
         self.obs = []
         self.obs_i = []
+
 
         if os.path.isfile(self.model_path+'lightning_res.pkl'):
             loaded = utility.load_info(self.model_path+'lightning_res.pkl')
@@ -338,7 +339,7 @@ class Lightning:
             to_save['loss'] = self.losses
             to_save['total_num_paths'] = self.total_num_paths
             to_save['total_num_paths_NN'] = self.total_num_paths_NN
-            to_save['plan_time'] = self.plan_times
+            to_save['plan_time'] = self.plan_time
             to_save['plan_mode'] = self.plan_mode
             to_save['total_new_node'] = self.total_new_nodes
             to_save['total_new_node_NN'] = self.total_new_nodes_NN
@@ -357,7 +358,7 @@ class Lightning:
 
         obs = torch.FloatTensor(obs)
 
-        dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, obs_i)
+        dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, 0)
         self.data_all += list(zip(dataset, targets, env_indices))
         self.num_trained_samples += len(targets)
         added_data = list(zip(dataset,targets,env_indices))
@@ -378,7 +379,6 @@ class Lightning:
             sample = random.sample(self.data_all, self.batch_rehersal)
             dataset, targets, env_indices = list(zip(*sample))
             dataset, targets, env_indices = list(dataset), list(targets), list(env_indices)
-            obs = np.array(self.obs)
             bi = np.concatenate( (obs[env_indices], dataset), axis=1).astype(np.float32)
             bt = targets
             bi = torch.FloatTensor(bi)
@@ -401,7 +401,7 @@ class Lightning:
             to_save['loss'] = self.losses
             to_save['total_num_paths'] = self.total_num_paths
             to_save['total_num_paths_NN'] = self.total_num_paths_NN
-            to_save['plan_time'] = self.plan_times
+            to_save['plan_time'] = self.plan_time
             to_save['plan_mode'] = self.plan_mode
             to_save['total_new_node'] = self.total_new_nodes
             to_save['total_new_node_NN'] = self.total_new_nodes_NN

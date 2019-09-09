@@ -1,0 +1,10 @@
+<!-- loading lightning launch file, and set parameters -->
+<launch>
+  <include file="$(find lightning)/launch/lightning_neural.launch"/>
+  <param name="/lightning/robot_name" value="baxter" />
+  <param name="/lightning/env_name" value="baxter" />
+  <param name="/lightning/planner_name" value="rrtstar" />
+  <rosparam command='load' file='$(find lightning)/scripts/experiments/baxter/baxter_model_parameters.yaml' ns='lightning/model' subst_value='True'>
+    <!-- ROS parameters for Neural Network -->
+  </rosparam>
+</launch>

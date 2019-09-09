@@ -4,7 +4,7 @@
   <param name="/lightning/robot_name" value="point_r3d" />
   <param name="/lightning/env_name" value="r3d" />
   <param name="/lightning/planner_name" value="rrtstar" />
-  <rosparam command='load' file='$(find lightning)/scripts/experiments/simple/r3d/r3d_model_parameters.yaml' ns='/lightning/model' subst_value='True'>
+  <rosparam command='load' file='$(find lightning)/scripts/experiments/simple/r3d/r3d_model_parameters.yaml' ns='lightning/model' subst_value='True'>
     <!-- ROS parameters for Neural Network -->
   </rosparam>
 </launch>
