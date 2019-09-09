@@ -515,12 +515,17 @@ class Lightning:
     # Called if PFS finishes before RR; stops the RR and returns the retrieved
     # path, so long as the planner succeeds.
     def _pfs_done_cb(self, state, result):
+        print('pfs done')
+        start = time.time()
         self.done_lock.acquire()
+        print('done lock acquired')
+        print('done lock acquire time: %f' % (time.time() - start))
         self.pfs_returned = True
         if self.publish_stats:
           stat_msg = Stats()
           stat_msg.rr_won = False
           stat_msg.plan_time = time.time() - self.start_time
+        print('handling done function: %f' % (time.time() - start))
         print('pfs_done_cb: plan time: %f' % (time.time() - self.start_time))
         if result.status.status == result.status.SUCCESS:
             if not self.rr_returned or self.lightning_response is None:

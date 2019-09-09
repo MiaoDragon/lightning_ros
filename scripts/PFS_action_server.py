@@ -232,10 +232,14 @@ class PFSNode:
 
         if not self._get_stop_value():
             # The planner succeeded; actually return the path in the result.
+            rospy.loginfo("PFS action server: finished planning, and set path back to lightning")
+            send_start = time.time()
             res.status.status = res.status.SUCCESS
             res.path = [Float64Array(p) for p in unfiltered]
             res.planner_type.planner_type = planner_type
             self.pfs_server.set_succeeded(res)
+            print('PFS sending time: %f' % (time.time() - send_start))
+            rospy.loginfo("PFS action server: have set succeeded")
             return
         else:
             rospy.loginfo("PFS action server: PFS found a path but RR succeeded first")
