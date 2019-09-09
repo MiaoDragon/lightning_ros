@@ -207,6 +207,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             collision checking
         """
         # obtain obstacle information through rostopic
+        start = time.time()
         rospy.loginfo("%s Plan Trajectory Wrapper: waiting for obstacle message..." % (rospy.get_name()))
         obc = rospy.wait_for_message('obstacles/obc', Float64Array2D)
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
@@ -225,6 +226,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         # reshape
         # plan
         IsInCollision = self.IsInCollision
+        rospy.loginfo("%s Plan Trajectory Wrapper: receiving message takes time: %f" % (rospy.get_name(), time.time() - start))        
         rospy.loginfo("%s Plan Trajectory Wrapper: start planning..." % (rospy.get_name()))
         # create a simple setup object
         start = ob.State(self.space)
