@@ -17,7 +17,7 @@ import sys
 from lightning.msg import Float64Array, Float64Array2D
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest, GetMotionPlanResponse
 from moveit_msgs.msg import JointConstraint, Constraints
-from std_msgs.msg import String, Float64
+from std_msgs.msg import String, Float64, Int32
 # here need to add the path to lightning framework
 from run_lightning import Lightning
 
@@ -73,6 +73,7 @@ def plan(args):
     # setup publisher
     obc_pub = rospy.Publisher('lightning/obstacles/obc', Float64Array2D, queue_size=10)
     obs_pub = rospy.Publisher('lightning/obstacles/obs', Float64Array, queue_size=10)
+    obs_i_pub = rospy.Publisher('lightning/obstacles/obs_i', Int32, queue_size=10)
     length_pub = rospy.Publisher('lightning/planning/path_length_threshold', Float64, queue_size=10)
 
     for i in xrange(len(paths)):
@@ -85,6 +86,7 @@ def plan(args):
         # publishing to ROS topic
         obc_msg = Float64Array2D([Float64Array(obci) for obci in obc])
         obs_msg = Float64Array(obs[i])
+        obs_i_msg = Int32(i)
         for j in xrange(len(paths[0])):
             if path_lengths[i][j] == 0:
                 continue
@@ -122,6 +124,7 @@ def plan(args):
                         print('sending obstacle message...')
                         obc_pub.publish(obc_msg)
                         obs_pub.publish(obs_msg)
+                        obs_i_pub.publish(obs_i_msg)
                         length_pub.publish(length_msg)
                         rospy.sleep(0.5)
                 pub_thread = threading.Thread(target=publisher, args=())
@@ -158,6 +161,7 @@ def plan(args):
         print('average test time up to now: %f' % (np.mean(time_total)))
         fes_env.append(fes_path)
         valid_env.append(valid_path)
+        print(np.sum(np.array(fes_env)))
         print('accuracy up to now: %f' % (float(np.sum(np.array(fes_env))) / np.sum(np.array(valid_env))))
     pickle.dump(time_env, open(args.res_path+'time.p', "wb" ))
     f = open(os.path.join(args.res_path,'accuracy.txt'), 'w')

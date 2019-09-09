@@ -62,7 +62,7 @@ import NeuralPathTools
 from architecture.GEM_end2end_model import End2EndMPNet
 from ompl import base as ob
 from ompl import geometric as og
-from experiments.simple import plan_general
+from tools import plan_general
 from experiments.simple import plan_c2d, plan_s2d, plan_r2d, plan_r3d
 #from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
 from experiments.simple import utility_s2d, utility_c2d, utility_r2d, utility_r3d
@@ -254,6 +254,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             rospy.loginfo("%s Plan Trajectory Wrapper: OMPL Planner solved successfully." % (rospy.get_name()))
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
+            rospy.loginfo("%s Plan Trajectory Wrapper: path length: %d" % (rospy.get_name(), len(ompl_path)))
             solutions = np.zeros((len(ompl_path),2))
             for k in xrange(len(ompl_path)):
                 solutions[k][0] = float(ompl_path[k][0])
@@ -303,6 +304,15 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         time_flag = False
         fp = 0
         plan_time = time.time()
+
+        def isStateValid(state):
+            return not IsInCollision(state, obc)
+        si = ob.SpaceInformation(self.space)
+        si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+        si.setup()
+
+
+
         for t in xrange(MAX_NEURAL_REPLAN):
         # adaptive step size on replanning attempts
             if (t == 2):
@@ -320,8 +330,23 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
                                     self.normalize_func, self.unnormalize_func, t==0, step_sz=step_sz, \
                                     time_flag=time_flag, device=self.device)
                 time_norm = 0
+            # print lvc time
+            print('Neural Planner: path length: %d' % (len(path)))
+            lvc_start = time.time()
             path = plan_general.lvc(path, obc, IsInCollision, step_sz=step_sz)
-            if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
+            print('Neural Planner: lvc time: %f' % (time.time() - lvc_start))
+            feasible_check_time = time.time()
+            # check feasibility using OMPL
+            path_ompl = og.PathGeometric(si)
+            for i in range(len(path)):
+                state = ob.State(self.space)
+                for j in range(len(path[i])):
+                    state[j] = path[i][j].item()
+                sref = state()  # a reference to the state
+                path_ompl.append(sref)
+            #path.check()
+            if path_ompl.check():
+                #if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
                 rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
                 break
@@ -350,33 +375,50 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
             #data_loader = data_loader_2d
             IsInCollision = plan_s2d.IsInCollision
             # create an SE2 state space
-            time_limit = 20.
+            space = ob.RealVectorStateSpace(2)
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'c2d':
             #data_loader = data_loader_2d
             IsInCollision = plan_c2d.IsInCollision
             # create an SE2 state space
-            time_limit = 10.
+            space = ob.RealVectorStateSpace(2)
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'r2d':
             #data_loader = data_loader_r2d
             IsInCollision = plan_r2d.IsInCollision
             # create an SE2 state space
-            time_limit = 50.
+            space = ob.SE2StateSpace()
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'r3d':
             #data_loader = data_loader_r3d
             IsInCollision = plan_r3d.IsInCollision
             # create an SE2 state space
-            time_limit = 20.
+            space = ob.RealVectorStateSpace(3)
+            bounds = ob.RealVectorBounds(3)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         self.IsInCollision = IsInCollision
+        self.space = space
+        # for thread-safety, should not modify shared vars
+        #self.si = ob.SpaceInformation(space)
 
     def shortcut_path(self, original_path, group_name):
         """
           Shortcuts a path, where the path is for a given group name.
-
           Args:
             original_path (list of list of float): The path, represented by
               a list of individual joint configurations.
             group_name (str): The group for which the path was created.
-
           Return:
             list of list of float: The shortcutted version of the path.
         """
@@ -386,11 +428,68 @@ class ShortcutPathWrapper(NeuralPathTools.ShortcutPathWrapper):
         # obs = rospy.wait_for_message('obstacles/obs', Float64Array2D)
         obc = [obc_i.values for obc_i in obc.points]
         obc = np.array(obc)
-        original_path = np.array(original_path)
-        rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
-        path = plan_general.lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
-        path = np.array(path).tolist()
+        #original_path = np.array(original_path)
+        #print(original_path)
+        #rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
+        #path = plan_general.lvc(original_path, obc, self.IsInCollision, step_sz=rospy.get_param("step_size"))
+        #path = np.array(path).tolist()
+
+        # try using OMPL method for shortcutting
+        IsInCollision = self.IsInCollision
+        def isStateValid(state):
+            return not IsInCollision(state, obc)
+        si = ob.SpaceInformation(self.space)
+        si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+        si.setup()
+        # use motionValidator
+        motionVal = ob.DiscreteMotionValidator(si)
+        path = original_path
+        states = []
+        for i in range(len(path)):
+            state = ob.State(self.space)
+            for j in range(len(path[i])):
+                state[j] = path[i][j]
+            states.append(state)
+        state_idx = list(range(len(states)))
+        def lvc(path, state_idx):
+            # state idx: map from path idx -> state idx
+            for i in range(0,len(path)-1):
+                for j in range(len(path)-1,i+1,-1):
+                    ind=0
+                    ind=motionVal.checkMotion(states[state_idx[i]](), states[state_idx[j]]())
+                    if ind==True:
+                        pc=[]
+                        new_state_idx = []
+                        for k in range(0,i+1):
+                            pc.append(path[k])
+                            new_state_idx.append(state_idx[k])
+                        for k in range(j,len(path)):
+                            pc.append(path[k])
+                            new_state_idx.append(state_idx[k])
+                        return lvc(pc, new_state_idx)
+            return path
+        path = lvc(original_path, state_idx)
         return path
+        """
+        pathSimplifier = og.PathSimplifier(si)
+        rospy.loginfo("Shortcut Path Wrapper: obstacle message received.")
+        path = original_path
+        path_ompl = og.PathGeometric(si)
+        for i in range(len(path)):
+            state = ob.State(self.space)
+            for j in range(len(path[i])):
+                state[j] = path[i][j]
+            sref = state()  # a reference to the state
+            path_ompl.append(sref)
+        # simplify by LVC
+        path_ompl_states = path_ompl.getStates()
+        solutions = np.zeros((len(path_ompl_states), len(path[0])))
+        pathSimplifier.collapseCloseVertices(path_ompl)
+        for i in xrange(path_ompl.getStateCount()):
+            for j in xrange(len(path[0])):
+                solutions[i][j] = float(path_ompl.getState(i)[j])
+        """
+        return solutions
 
 class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
     """

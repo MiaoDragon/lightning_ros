@@ -63,13 +63,13 @@ from lightning.msg import UpdateAction, UpdateGoal
 from lightning.msg import RRAction, RRGoal, PFSAction, PFSGoal, Float64Array, StopPlanning, Stats, PlannerType
 from lightning.srv import ManagePathLibrary, ManagePathLibraryRequest, PathShortcut, PathShortcutRequest
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanResponse
-from std_msgs.msg import Float32, UInt8
+from std_msgs.msg import Float32, UInt8, Int32
 from trajectory_msgs.msg import JointTrajectoryPoint
 from tools import NeuralOMPLPathTools, NeuralPathTools
 from tools import utility
-from experiments.simple import plan_general
+from tools import plan_general
 from architecture.GEM_end2end_model import End2EndMPNet
-
+import random
 import numpy as np
 import torch
 # Node names for RR and PFS plan retrieval.
@@ -84,6 +84,7 @@ LIGHTNING_SERVICE = "lightning_get_path"
 SET_PLANNING_SCENE_DIFF_NAME = "/get_planning_scene";
 # Service name for managing path library.
 MANAGE_LIBRARY = "manage_path_library"
+PLANNING_SCENE_SERV_NAME = "/get_planning_scene";
 
 # Topic to publish to for updating the neural network
 # UPDATE_TOPIC = 'model_update'
@@ -187,6 +188,19 @@ class Lightning:
         self.total_new_nodes_NN = []  # total number of newly generated nodes by NN
         self.total_new_node = 0
         self.total_new_node_NN = 0
+        self.obs = []
+        self.obs_i = []
+
+
+        if os.path.isfile(self.model_path+'lightning_res.pkl'):
+            loaded = utility.load_info(self.model_path+'lightning_res.pkl')
+            self.losses = loaded['loss']
+            self.total_num_paths = loaded['total_num_paths']
+            self.total_num_paths_NN = loaded['total_num_paths_NN']
+            self.plan_times = loaded['plan_time']
+            self.plan_mode = loaded['plan_mode']
+            self.total_new_nodes = loaded['total_new_node']
+            self.total_new_nodes_NN = loaded['total_new_node_NN']
 
 
     def _notify_update(self, client_name):
@@ -335,6 +349,13 @@ class Lightning:
         # receive obstacle information
         obs = rospy.wait_for_message('obstacles/obs', Float64Array)
         obs = obs.values
+        obs_i = rospy.wait_for_message('obstacles/obs_i', Int32)
+        obs_i = obs_i.data
+        # if it is a new obs, add to the obs list
+        if len(self.obs_i) == 0 or obs_i != self.obs_i[-1]:
+            self.obs_i.append(obs_i)
+            self.obs.append(obs)
+
         obs = torch.FloatTensor(obs)
 
         dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, 0)
@@ -448,11 +469,12 @@ class Lightning:
                 print('lightning: total_new_node: %d' % (self.total_new_node))
                 print('lightning: total_new_node_NN: %d' % (self.total_new_node_NN))
                 print('rr_done_cb: total_num_paths_NN: %d' % (total_num_paths_NN))
+                print('rr_done_cb: planning time: %f' % (time.time() - self.start_time))
                 shortcut_start = time.time()
                 shortcut = self.shortcut_path_wrapper.shortcut_path(rr_path, self.current_group_name)
                 if self.publish_stats:
                   stat_msg.shortcut_time = time.time() - shortcut_start
-
+                print('rr_done_cb: shortcut time: %f' % (time.time() - shortcut_start))
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
                 # set planning time to be the total time up to now
                 self.lightning_response.motion_plan_response.planning_time = time.time() - self.start_time
@@ -460,10 +482,12 @@ class Lightning:
                 self.retrieved_and_final_path = [result.retrieved_planner_type.planner_type, None, \
                                                  result.repaired_planner_type.planner_type, rr_path, \
                                                  total_num_paths, total_num_paths_NN]
-
+                # record the planning time
+                self.plan_time = time.time() - self.start_time
                 self.lightning_response_ready_event.set()
                 self.done_lock.release()
 
+                print('rr_done_cb: total time: %f' % (time.time() - self.start_time))
                 #display new path in rviz
                 if self.draw_points:
                     self.draw_points_wrapper.draw_points(rr_path, self.current_group_name, "final", DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREEN, 0.1)
@@ -474,8 +498,7 @@ class Lightning:
                     self._special_print("Lightning: Got a path from RR, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from RR")
-                # record the planning time
-                self.plan_time = time.time() - self.start_time
+
                 if self.publish_stats:
                   stat_msg.time = time.time() - self.start_time
                   stat_msg.rr_won = True
@@ -492,12 +515,18 @@ class Lightning:
     # Called if PFS finishes before RR; stops the RR and returns the retrieved
     # path, so long as the planner succeeds.
     def _pfs_done_cb(self, state, result):
+        print('pfs done')
+        start = time.time()
         self.done_lock.acquire()
+        print('done lock acquired')
+        print('done lock acquire time: %f' % (time.time() - start))
         self.pfs_returned = True
         if self.publish_stats:
           stat_msg = Stats()
           stat_msg.rr_won = False
           stat_msg.plan_time = time.time() - self.start_time
+        print('handling done function: %f' % (time.time() - start))
+        print('pfs_done_cb: plan time: %f' % (time.time() - self.start_time))
         if result.status.status == result.status.SUCCESS:
             if not self.rr_returned or self.lightning_response is None:
                 self._send_stop_rr_planning()
@@ -507,6 +536,7 @@ class Lightning:
                 shortcut = self.shortcut_path_wrapper.shortcut_path(pfsPath, self.current_group_name)
                 if self.publish_stats:
                   stat_msg.shortcut_time = time.time() - shortcut_start
+                print('pfs_done_cb: shortcut time: %f' % (time.time() - shortcut_start))
 
                 self.lightning_response = self._create_get_motion_plan_response(shortcut)
                 # set planning time to be the total time up to now
@@ -524,6 +554,8 @@ class Lightning:
                     self.total_new_node = len(pfsPath)
                     self.total_new_node_NN = len(pfsPath)
 
+                self.plan_time = time.time() - self.start_time
+                print('pfs_done_cb: total time: %f' % (time.time() - self.start_time))
                 self.lightning_response_ready_event.set()
                 self.done_lock.release()
 
@@ -536,7 +568,6 @@ class Lightning:
                     self._special_print("Lightning: Got a path from PFS, path stored = %s, number of library paths = %i" % (store_response))
                 else:
                     self._special_print("Lightning: Got a path from PFS")
-                self.plan_time = time.time() - self.start_time
                 if self.publish_stats:
                   stat_msg.time = time.time() - self.start_time
                   self.stat_pub.publish(stat_msg)

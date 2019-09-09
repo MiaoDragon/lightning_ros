@@ -9,9 +9,7 @@
         <param name="framework_type" value="ompl" />
         <param name="env_name" value="s2d" />
         <param name="planner_name" value="rrtstar" />
-        <rosparam command='load' file='$(find lightning)/scripts/experiments/simple/s2d/s2d_model_parameters.yaml' ns='model' subst_value='True'>
-          <!-- ROS parameters for Neural Network -->
-        </rosparam>
+
         <!-- <remap from="register_planning_scene" to="/register_planning_scene" />-->
 
         <!-- don't need to load planners for RR and PFS, because it is taken care of by OMPL -->

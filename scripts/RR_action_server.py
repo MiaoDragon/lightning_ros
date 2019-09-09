@@ -78,6 +78,8 @@ STOP_PLANNER_NAME = "stop_rr_planning"
 STOP_RR_NAME = "stop_all_rr"
 # Name of library managing service run from this node.
 MANAGE_LIBRARY = "manage_path_library"
+PLANNING_SCENE_SERV_NAME = "/get_planning_scene";
+
 STATE_RETRIEVE, STATE_REPAIR, STATE_RETURN_PATH, STATE_FINISHED, STATE_FINISHED = (0, 1, 2, 3, 4)
 
 class RRNode:
