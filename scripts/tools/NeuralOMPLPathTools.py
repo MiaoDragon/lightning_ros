@@ -198,6 +198,7 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         self.world_size = world_size
         self.normalize_func=lambda x: normalize(x, self.world_size)
         self.unnormalize_func=lambda x: unnormalize(x, self.world_size)
+        self.finished = False
         # for thread-safety, should not modify shared vars
         #self.si = ob.SpaceInformation(space)
 
@@ -247,8 +248,19 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
         ss = allocatePlanner(si, self.planner_name)
         ss.setProblemDefinition(pdef)
         ss.setup()
+
         plan_time = time.time()
-        solved = ss.solve(planning_time)
+        # plan for several times, and each time check if the other planner has finished
+        # if not, continue on previous plan
+        plan_iter = 10
+        for i in range(plan_iter):
+            solved = ss.solve(planning_time/plan_iter)
+            # check if current length is better than our criteria, if so, break
+            if pdef.getSolutionPath().length() <= path_length:
+                break
+            if self.finished:
+                # return the current solution
+                break
         plan_time = time.time() - plan_time
         if solved:
             rospy.loginfo("%s Plan Trajectory Wrapper: OMPL Planner solved successfully." % (rospy.get_name()))
@@ -259,6 +271,8 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             for k in xrange(len(ompl_path)):
                 for idx in xrange(len(start_point)):
                     solutions[k][idx] = float(ompl_path[k][idx])
+            # clear previous data
+            ss.clear()
             return plan_time, solutions.tolist()
         else:
             return np.inf, None
@@ -349,6 +363,9 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
                 #if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
                 fp = 1
                 rospy.loginfo('%s Neural Planner: plan is feasible.' % (rospy.get_name()))
+                break
+            if self.finished:
+                # if other planner has finished, stop
                 break
             if time.time() - plan_time >= planning_time:
                 # we can't allow the planner to go too long
@@ -500,14 +517,43 @@ class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
         self.env_name = rospy.get_param('env_name')
         self.planner = rospy.get_param('planner_name')
         if self.env_name == 's2d':
+            #data_loader = data_loader_2d
             IsInCollision = plan_s2d.IsInCollision
+            # create an SE2 state space
+            space = ob.RealVectorStateSpace(2)
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'c2d':
+            #data_loader = data_loader_2d
             IsInCollision = plan_c2d.IsInCollision
+            # create an SE2 state space
+            space = ob.RealVectorStateSpace(2)
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'r2d':
+            #data_loader = data_loader_r2d
             IsInCollision = plan_r2d.IsInCollision
+            # create an SE2 state space
+            space = ob.SE2StateSpace()
+            bounds = ob.RealVectorBounds(2)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         elif self.env_name == 'r3d':
+            #data_loader = data_loader_r3d
             IsInCollision = plan_r3d.IsInCollision
+            # create an SE2 state space
+            space = ob.RealVectorStateSpace(3)
+            bounds = ob.RealVectorBounds(3)
+            bounds.setLow(-20)
+            bounds.setHigh(20)
+            space.setBounds(bounds)
         self.IsInCollision = IsInCollision
+        self.space = space
     def get_invalid_sections_for_path(self, original_path, group_name):
         """
           Returns the invalid sections for a single path.
@@ -549,26 +595,75 @@ class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
         rospy.loginfo("Invalid Section Wrapper: obstacle message received.")
         # transform from orig_paths
         # for each path, check the invalid sections
-        inv_sec_paths = []
-        for orig_path in orig_paths:
-            inv_sec_path = []
-            start_i = 0
-            end_i = 0
-            mode = True # valid till now
-            for point_i in xrange(len(orig_path)):
-                point = orig_path[point_i]
-                if self.IsInCollision(point, obc):
-                    mode = False
+        """
+        general idea:
+            invalid section: 1. start and end should be not in collision, but intermediate nodes are all in collision.
+                             2. start and end not in collision, no intermediate nodes, but not line collision free
+            we assume that for all paths, the start and end are not in collision (valid planning problem, since projected)
+        psuedo code:
+            tracking = False
+            while True:
+                if not tracking:
+                    if is last node, then break
+                    line search (including end point) to next node:
+                        fail ->
+                            update start -> current
+                            tracking = True
+                        success ->
+                        move to next node
                 else:
-                    if mode:
-                        # if valid till now, update start
+                    collision free on current point:
+                        fail ->
+                            move to next node
+                        success ->
+                            end -> current
+                            save invalid section (start - end)
+                            tracking -> False
+        """
+        inv_sec_paths = []
+        # set up OMPL env for line searching
+        IsInCollision = self.IsInCollision
+        def isStateValid(state):
+            return not IsInCollision(state, obc)
+        for orig_path in orig_paths:
+            si = ob.SpaceInformation(self.space)
+            si.setStateValidityChecker(ob.StateValidityCheckerFn(isStateValid))
+            si.setup()
+            # use motionValidator
+            motionVal = ob.DiscreteMotionValidator(si)
+            path = orig_path
+            states = []
+            for i in range(len(path)):
+                state = ob.State(self.space)
+                for j in range(len(path[i])):
+                    state[j] = path[i][j]
+                states.append(state)
+
+            inv_sec_path = []
+            start_i = -1
+            end_i = -1
+            invalid_tracking = False
+            point_i = 0
+            while point_i < len(orig_path):
+                if not invalid_tracking:
+                    if point_i == len(orig_path) - 1:
+                        break
+                    # line search to the next node
+                    ind=motionVal.checkMotion(states[point_i](), states[point_i+1]())
+                    if ind == False:
                         start_i = point_i
-                    else:
-                        # if not valid, then update end
+                        invalid_tracking = True
+                    # move to next point
+                    point_i += 1
+                else:
+                    # collision check on current point
+                    ind = isStateValid(path[point_i])
+                    if ind == True:
                         end_i = point_i
-                        start_i = point_i
                         inv_sec_path.append([start_i, end_i])
-                        mode = True  # become valid again
+                        invalid_tracking = False
+                    else:
+                        point_i += 1
             inv_sec_paths.append(inv_sec_path)
         return inv_sec_paths
 

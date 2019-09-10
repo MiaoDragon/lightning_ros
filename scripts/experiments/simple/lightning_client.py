@@ -6,6 +6,7 @@ sys.path.insert(1, top_path+'/scripts')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 #sys.path.insert(1, '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/scripts')
 from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
+from experiments.simple import plan_s2d, plan_c2d, plan_r2d, plan_r3d
 import argparse
 import pickle
 import time
@@ -40,24 +41,28 @@ def plan(args):
     rospy.init_node('lightning_client')
     print('loading...')
     if args.env_type == 's2d':
+        IsInCollision = plan_s2d.IsInCollision
         data_loader = data_loader_2d
         # create an SE2 state space
-        time_limit = 10.
+        time_limit = 15.
         ratio = 1.
     elif args.env_type == 'c2d':
+        IsInCollision = plan_c2d.IsInCollision
         data_loader = data_loader_2d
         # create an SE2 state space
         time_limit = 60.
         ratio = 1.
     elif args.env_type == 'r2d':
+        IsInCollision = plan_r2d.IsInCollision
         data_loader = data_loader_r2d
         # create an SE2 state space
         time_limit = 60.
         ratio = 1.05
     elif args.env_type == 'r3d':
+        IsInCollision = plan_r3d.IsInCollision
         data_loader = data_loader_r3d
         # create an SE2 state space
-        time_limit = 10.
+        time_limit = 15.
         ratio = 1.
 
     test_data = data_loader.load_test_dataset(N=args.N, NP=args.NP, s=args.env_idx, sp=args.path_idx, folder=args.data_path)
@@ -90,6 +95,12 @@ def plan(args):
         for j in xrange(len(paths[0])):
             if path_lengths[i][j] == 0:
                 continue
+            # check if the start and goal are in collision
+            # if so, then continue
+            if IsInCollision(paths[i][j][0], obc) or IsInCollision(paths[i][j][path_lengths[i][j]-1], obc):
+                continue
+
+
             fp = 0 # indicator for feasibility
             print ("step: i="+str(i)+" j="+str(j))
             if path_lengths[i][j]==0:

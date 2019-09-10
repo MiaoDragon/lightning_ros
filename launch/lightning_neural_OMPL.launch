@@ -2,7 +2,6 @@
     <!-- all lightning default parameters are set here -->
     <group ns="lightning">
         <param name="robot_name" value="point" />
-        <param name="step_size" value="0.01" />
         <param name="increment" value="1" />
         <param name="draw_points" value="false" />
         <param name="publish_stats" value="false" />

@@ -165,7 +165,8 @@ class RRNode:
         self.plan_trajectory_wrapper.release_planner(planner_number)
         self._call_classic_planner_res = [classic_planner_time, ret]
         rospy.loginfo('RR_action_server: Finished classic planning.')
-
+        # let planner know that the plan is over
+        self.plan_trajectory_wrapper.finished = True
 
     def _call_neural_planner(self, start, goal, planning_time):
         """
@@ -195,7 +196,8 @@ class RRNode:
         self.plan_trajectory_wrapper.release_neural_planner(planner_number)
         self._call_neural_planner_res = [neural_planner_time, ret]
         rospy.loginfo('RR_action_server: Finished neural planning.')
-
+        # let planner know that the plan is over
+        self.plan_trajectory_wrapper.finished = True
 
     def _call_planner(self, start, goal, planning_time):
         """
@@ -213,6 +215,7 @@ class RRNode:
             path: A list of joint configurations corresponding to the planned
               path.
         """
+        self.plan_trajectory_wrapper.finished = False
         threadList = []
         classical_planner = threading.Thread(target=self._call_classic_planner, args=(start, goal, planning_time))
         neural_planner = threading.Thread(target=self._call_neural_planner, args=(start, goal, planning_time))
@@ -351,6 +354,12 @@ class RRNode:
                     repair_state = STATE_REPAIR
             elif repair_state == STATE_REPAIR:
                 start_repair = time.time()
+                #print('RR action server: retrieved path:')
+                #print(retrieved)
+                #print('RR action server: projected path:')
+                #print(projected)
+                #print('RR action server: invalid:')
+                #print(invalid)
                 repaired_planner_type, repaired, total_num_paths, total_num_paths_NN, \
                     total_new_node, total_new_node_NN = \
                     self._path_repair(projected, action_goal.allowed_planning_time.to_sec(), invalid_sections=invalid)

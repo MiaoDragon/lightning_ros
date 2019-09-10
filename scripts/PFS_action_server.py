@@ -139,7 +139,8 @@ class PFSNode:
         self.plan_trajectory_wrapper.release_planner(planner_number)
         self._call_classic_planner_res = [classic_planner_time, ret]
         rospy.loginfo('PFS_action_server: Finished classic planning.')
-
+        # let planner know that the plan is over
+        self.plan_trajectory_wrapper.finished = True
 
     def _call_neural_planner(self, start, goal, planning_time):
         """
@@ -169,6 +170,8 @@ class PFSNode:
         self.plan_trajectory_wrapper.release_neural_planner(planner_number)
         self._call_neural_planner_res = [neural_planner_time, ret]
         rospy.loginfo('PFS_action_server: Finished neural planning.')
+        # let planner know that the plan is over
+        self.plan_trajectory_wrapper.finished = True
 
     def _call_planner(self, start, goal, planning_time):
         """
@@ -187,6 +190,8 @@ class PFSNode:
             path: A list of joint configurations corresponding to the planned
               path.
         """
+        # reset the finished flag
+        self.plan_trajectory_wrapper.finished = False
         threadList = []
         classical_planner = threading.Thread(target=self._call_classic_planner, args=(start, goal, planning_time))
         neural_planner = threading.Thread(target=self._call_neural_planner, args=(start, goal, planning_time))

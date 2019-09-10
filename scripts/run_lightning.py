@@ -275,8 +275,9 @@ class Lightning:
             rr_client_goal.goal = g
             rr_client_goal.joint_names = self.current_joint_names
             rr_client_goal.group_name = self.current_group_name
+            # allow less planning time due to intercommunication
             rr_client_goal.allowed_planning_time = rospy.Duration(
-                request.motion_plan_request.allowed_planning_time)
+                request.motion_plan_request.allowed_planning_time - 5)
             self.rr_client.wait_for_server()
             rospy.loginfo("Lightning: Sending goal to RR")
             self.rr_client.send_goal(rr_client_goal, done_cb=self._rr_done_cb)
@@ -288,7 +289,7 @@ class Lightning:
             pfs_client_goal.joint_names = self.current_joint_names
             pfs_client_goal.group_name = self.current_group_name
             pfs_client_goal.allowed_planning_time = rospy.Duration(
-                request.motion_plan_request.allowed_planning_time)
+                request.motion_plan_request.allowed_planning_time - 5)
             self.pfs_client.wait_for_server()
             rospy.loginfo("Lightning: Sending goal to PFS")
             self.pfs_client.send_goal(pfs_client_goal, done_cb=self._pfs_done_cb)
