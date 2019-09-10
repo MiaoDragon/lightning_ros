@@ -255,10 +255,10 @@ class PlanTrajectoryWrapper(NeuralPathTools.PlanTrajectoryWrapper):
             # obtain planned path
             ompl_path = pdef.getSolutionPath().getStates()
             rospy.loginfo("%s Plan Trajectory Wrapper: path length: %d" % (rospy.get_name(), len(ompl_path)))
-            solutions = np.zeros((len(ompl_path),2))
+            solutions = np.zeros((len(ompl_path),len(start_point)))
             for k in xrange(len(ompl_path)):
-                solutions[k][0] = float(ompl_path[k][0])
-                solutions[k][1] = float(ompl_path[k][1])
+                for idx in xrange(len(start_point)):
+                    solutions[k][idx] = float(ompl_path[k][idx])
             return plan_time, solutions.tolist()
         else:
             return np.inf, None

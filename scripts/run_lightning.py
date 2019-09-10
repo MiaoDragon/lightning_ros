@@ -339,7 +339,7 @@ class Lightning:
             to_save['loss'] = self.losses
             to_save['total_num_paths'] = self.total_num_paths
             to_save['total_num_paths_NN'] = self.total_num_paths_NN
-            to_save['plan_time'] = self.plan_time
+            to_save['plan_time'] = self.plan_times
             to_save['plan_mode'] = self.plan_mode
             to_save['total_new_node'] = self.total_new_nodes
             to_save['total_new_node_NN'] = self.total_new_nodes_NN
@@ -401,7 +401,7 @@ class Lightning:
             to_save['loss'] = self.losses
             to_save['total_num_paths'] = self.total_num_paths
             to_save['total_num_paths_NN'] = self.total_num_paths_NN
-            to_save['plan_time'] = self.plan_time
+            to_save['plan_time'] = self.plan_times
             to_save['plan_mode'] = self.plan_mode
             to_save['total_new_node'] = self.total_new_nodes
             to_save['total_new_node_NN'] = self.total_new_nodes_NN

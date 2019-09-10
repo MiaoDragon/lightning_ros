@@ -3,3 +3,6 @@ data/**
 results/**
 # ignore generated paths
 scripts/pathlib/paths/**
+# ignore pyc files
+*.pyc
+msg/*

@@ -1,6 +1,8 @@
 mlp_arch_path: 'architecture.model'
 cae_arch_path: 'architecture.AE.CAE_r3d'
-model_path: '/home/arclabdl1/YLmiao/catkin_ws/src/mpnet_lightning_ros/results/simple/r3d/'
+#model_path: '/home/arclabdl1/YLmiao/catkin_ws/src/mpnet_lightning_ros/results/simple/r3d/'
+model_path: '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/results/simple/r3d/'
+
 model_name: 'model_r3d.pkl'
 normalizer_path: 'experiments.simple.utility_r3d'
 world_size: [20, 20, 20]
@@ -14,9 +16,13 @@ memory_strength: 0.5
 grad_step: 1
 opt_type: 'Adagrad'
 learning_rate: 0.001
-server_device: 'cuda:3'
-pfs_device: 'cuda:2'
-rr_device: 'cuda:0'
+server_device: 'cpu'
+pfs_device: 'cpu'
+rr_device: 'cpu'
+
+#server_device: 'cuda:3'
+#pfs_device: 'cuda:2'
+#rr_device: 'cuda:0'
 freq_rehersal: 100
 batch_rehersal: 100
 # how many trained paths before next save
