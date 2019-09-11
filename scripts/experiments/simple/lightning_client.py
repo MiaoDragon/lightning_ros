@@ -93,17 +93,15 @@ def plan(args):
         obs_msg = Float64Array(obs[i])
         obs_i_msg = Int32(i)
         for j in xrange(len(paths[0])):
-            if path_lengths[i][j] == 0:
-                continue
             # check if the start and goal are in collision
             # if so, then continue
-            if IsInCollision(paths[i][j][0], obc) or IsInCollision(paths[i][j][path_lengths[i][j]-1], obc):
-                continue
-
-
             fp = 0 # indicator for feasibility
             print ("step: i="+str(i)+" j="+str(j))
             if path_lengths[i][j]==0:
+                # invalid, feasible = 0, and path count = 0
+                fp = 0
+                valid_path.append(0)
+            elif IsInCollision(paths[i][j][0], obc) or IsInCollision(paths[i][j][path_lengths[i][j]-1], obc):
                 # invalid, feasible = 0, and path count = 0
                 fp = 0
                 valid_path.append(0)
