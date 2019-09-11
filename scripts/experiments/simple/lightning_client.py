@@ -173,6 +173,7 @@ def plan(args):
                         print('feasible')
                     else:
                         fp = 0
+                        print('not feasible')
             fes_path.append(fp)
         time_env.append(time_path)
         time_total += time_path
