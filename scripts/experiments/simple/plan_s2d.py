@@ -1,6 +1,9 @@
 import numpy as np
 
 def IsInCollision(x,obc):
+    if abs(x[0]) >= 20. or abs(x[1]) >= 20.:
+        # in collision
+        return True
     size = 5.0
     s=np.zeros(2,dtype=np.float32)
     s[0]=x[0]

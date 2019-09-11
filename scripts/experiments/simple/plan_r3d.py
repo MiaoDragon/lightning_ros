@@ -1,6 +1,10 @@
 import numpy as np
 def IsInCollision(x,obc):
     #padding=0.5
+    # check if out of boundary
+    if abs(x[0]) >= 20. or abs(x[1]) >= 20. or abs(x[2]) >= 20.:
+        # in collision
+        return True
     padding=0.0
     size=5.0
     shape=[[5.0,5.0,10.0],[5.0,10.0,5.0],[5.0,10.0,10.0],[10.0,5.0,5.0],[10.0,5.0,10.0],[10.0,10.0,5.0],[10.0,10.0,10.0],[5.0,5.0,5.0],[10.0,10.0,10.0],[5.0,5.0,5.0]]
