@@ -651,7 +651,7 @@ class InvalidSectionWrapper(NeuralPathTools.InvalidSectionWrapper):
                     # line search to the next node
                     ind=motionVal.checkMotion(states[point_i](), states[point_i+1]())
                     # also consider the endpoint
-                    ind = isStateValid
+                    ind = ind and isStateValid(states[point_i+1])
                     if ind == False:
                         start_i = point_i
                         invalid_tracking = True
