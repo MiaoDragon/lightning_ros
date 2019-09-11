@@ -163,7 +163,9 @@ def plan(args):
                     # succeed
                     time = respond.motion_plan_response.planning_time
                     time_path.append(time)
-                    path = np.array(respond.motion_plan_response.trajectory.joint_trajectory.points)
+                    path = respond.motion_plan_response.trajectory.joint_trajectory.points
+                    path = [p.positions for p in path]
+                    path = np.array(path)
                     print(path)
                     # feasibility check this path
                     if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
