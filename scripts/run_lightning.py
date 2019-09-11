@@ -359,7 +359,7 @@ class Lightning:
 
         obs = torch.FloatTensor(obs)
 
-        dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, 0)
+        dataset, targets, env_indices = plan_general.transformToTrain(final_path, len(final_path), obs, obs_i)
         self.data_all += list(zip(dataset, targets, env_indices))
         self.num_trained_samples += len(targets)
         added_data = list(zip(dataset,targets,env_indices))
@@ -380,6 +380,7 @@ class Lightning:
             sample = random.sample(self.data_all, self.batch_rehersal)
             dataset, targets, env_indices = list(zip(*sample))
             dataset, targets, env_indices = list(dataset), list(targets), list(env_indices)
+            obs = np.array(self.obs)
             bi = np.concatenate( (obs[env_indices], dataset), axis=1).astype(np.float32)
             bt = targets
             bi = torch.FloatTensor(bi)
