@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 #sys.path.insert(1, '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/scripts')
 from experiments.simple import data_loader_2d, data_loader_r2d, data_loader_r3d
 from experiments.simple import plan_s2d, plan_c2d, plan_r2d, plan_r3d
+rom tools import plan_general
 import argparse
 import pickle
 import time
@@ -160,10 +161,15 @@ def plan(args):
 
                 if respond.motion_plan_response.error_code.val == respond.motion_plan_response.error_code.SUCCESS:
                     # succeed
-                    fp = 1
                     time = respond.motion_plan_response.planning_time
                     time_path.append(time)
-                    print('feasible')
+                    path = np.array(respond.motion_plan_response.path)
+                    # feasibility check this path
+                    if plan_general.feasibility_check(path, obc, IsInCollision, step_sz=0.01):
+                        fp = 1
+                        print('feasible')
+                    else:
+                        fp = 0
             fes_path.append(fp)
         time_env.append(time_path)
         time_total += time_path
