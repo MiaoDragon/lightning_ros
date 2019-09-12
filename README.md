@@ -1,3 +1,15 @@
+# Lightning on Baxter environment
+1. launch baxter world, enable baxter and launch baxter moveit planner. (will be provided later)
+2. launch scripts/experiments/baxter/lightning.launch
+3. in a separate window, run lightning_baxter.sh script under scripts/experiments/baxter
+
+# Playback planned paths:
+1. launch baxter world, enable baxter and launch baxter moveit planner.
+2. launch rviz. Visualize robot_model and planning_scene.
+3. set the parameters, and run playback.py.
+
+
+
 # LightningROS
 LightningROS is planner implementing the planner described at
 http://arc.wpi.edu/download.php?p=9 (see "Combined Learning and Manipulation

@@ -132,7 +132,8 @@ class PointDrawer:
 
     def _create_add_point(self, coords, point_group_name, id, red, green, blue, point_radius):
         marker = Marker()
-        marker.header.frame_id = "odom_combined"
+        #marker.header.frame_id = "odom_combined"
+        marker.header.frame_id = "map"
         marker.header.stamp = rospy.get_rostime()
         marker.ns = point_group_name
         marker.id = id
@@ -169,7 +170,8 @@ class PointDrawer:
                 all_points.append(pt2)
 
         marker = Marker()
-        marker.header.frame_id = "odom_combined"
+        #marker.header.frame_id = "odom_combined"
+        marker.header.frame_id = "map"
         marker.header.stamp = rospy.get_rostime()
         marker.ns = point_group_name
         marker.id = id
@@ -196,7 +198,8 @@ class PointDrawer:
 
     def _create_clear_marker(self, point_group_name, id):
         marker = Marker()
-        marker.header.frame_id = "odom_combined"
+        #marker.header.frame_id = "odom_combined"
+        marker.header.frame_id = "map"
         marker.header.stamp = rospy.get_rostime()
         marker.ns = point_group_name
         marker.id = id
@@ -216,7 +219,8 @@ class PointDrawer:
 
         fk_client = rospy.ServiceProxy(FK_NAME, GetPositionFK)
         fk_request = GetPositionFKRequest()
-        fk_request.header.frame_id = "odom_combined"
+        #fk_request.header.frame_id = "odom_combined"
+        fk_request.header.frame_id = 'map'
         fk_request.fk_link_names.append("%s_wrist_roll_link" % (arm[0]))
 
         fk_request.robot_state.joint_state.name = info_response.kinematic_solver_info.joint_names

@@ -127,7 +127,7 @@ class Lightning:
         self.draw_points = rospy.get_param("draw_points")
         if self.draw_points:
             self.draw_points_wrapper = DrawPointsWrapper()
-
+        self.DrawPointsWrapper = DrawPointsWrapper
         self.publish_stats = rospy.get_param("publish_stats")
         if self.publish_stats:
           # Publishes statistics having to do with the time it takes various
@@ -260,8 +260,8 @@ class Lightning:
         self.current_joint_names = request.motion_plan_request.start_state.joint_state.name
         self.current_group_name = request.motion_plan_request.group_name
 
-        if self.draw_points:
-            self.draw_points_wrapper.clear_points()
+        #if self.draw_points:
+        #    self.draw_points_wrapper.clear_points()
 
         #start a timer that stops planners if they take too long
         timer = threading.Thread(target=self._lightning_timeout, args=(request.motion_plan_request.allowed_planning_time,))
@@ -364,6 +364,7 @@ class Lightning:
         self.num_trained_samples += len(targets)
         added_data = list(zip(dataset,targets,env_indices))
         bi = np.concatenate( (obs.numpy().reshape(1,-1).repeat(len(dataset),axis=0), dataset), axis=1).astype(np.float32)
+        targets = np.array(targets)
         bi = self.normalize_func(bi)
         targets = self.normalize_func(targets)
         bi = torch.FloatTensor(bi)
@@ -492,7 +493,7 @@ class Lightning:
                 print('rr_done_cb: total time: %f' % (time.time() - self.start_time))
                 #display new path in rviz
                 if self.draw_points:
-                    self.draw_points_wrapper.draw_points(rr_path, self.current_group_name, "final", DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREEN, 0.1)
+                    self.draw_points_wrapper.draw_points(rr_path, self.current_group_name, "final", self.DrawPointsWrapper.ANGLES, self.DrawPointsWrapper.GREEN, 0.1)
 
                 if self.store_paths:
                     #store_response = self._store_path(rr_path, rr_path) # this original version seems to be wrong because retrieved is the same as repaired
@@ -563,7 +564,7 @@ class Lightning:
 
                 #display new path in rviz
                 if self.draw_points:
-                    self.draw_points_wrapper.draw_points(pfsPath, self.current_group_name, "final", DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREEN, 0.1)
+                    self.draw_points_wrapper.draw_points(pfsPath, self.current_group_name, "final", self.DrawPointsWrapper.ANGLES, self.DrawPointsWrapper.GREEN, 0.1)
 
                 if self.store_paths:
                     store_response = self._store_path(pfsPath, [], result.planner_type.planner_type)

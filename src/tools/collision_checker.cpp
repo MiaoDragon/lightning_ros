@@ -105,7 +105,7 @@ bool CollisionChecker::isStateValid(const ::std::vector<double> &state,
   std::map<std::string, double> pos;
   for (int i = 0; i < num_joints_; i++) {
     pos[joint_names_[i]] = state[i];
-    ROS_INFO("Setting %s to %f", joint_names_[i].c_str(), state[i]);
+    //ROS_INFO("Setting %s to %f", joint_names_[i].c_str(), state[i]);
   }
   robot_state.setVariablePositions(pos);
   scene->setCurrentState(robot_state);

@@ -4,7 +4,7 @@
         <param name="robot_name" value="pr2" />
         <param name="step_size" value="0.02" />
         <param name="increment" value="1" />
-        <param name="draw_points" value="false" />
+        <param name="draw_points" default="false" />
         <param name="publish_stats" value="false" />
         <remap from="register_planning_scene" to="/register_planning_scene" />
         <param name="framework_type" value="moveit" />

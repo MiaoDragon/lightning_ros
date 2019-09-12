@@ -85,6 +85,9 @@ UPDATE_TOPIC = 'model_update'
 
 DEFAULT_STEP = 2.
 
+
+STATE_VALID = '/check_state_validity'
+
 class PlanTrajectoryWrapper:
     """
       This wrapper class handles calling the GetMotionPlan service of
@@ -132,6 +135,12 @@ class PlanTrajectoryWrapper:
         self.world_size = rospy.get_param('model/world_size')
         self.normalize_func=lambda x: self.normalize(x, self.world_size)
         self.unnormalize_func=lambda x: self.unnormalize(x, self.world_size)
+        self.finished = False
+        # wait for collision checking service
+        rospy.loginfo('%s PlanTrajectoryWrapper: waiting for collision checking service...' % (rospy.get_name()))
+        rospy.wait_for_service(STATE_VALID)
+        rospy.loginfo('%s PlanTrajectoryWrapper: collision checking service acquired.' % (rospy.get_name()))
+
 
     def _update_model(self, goal):
         rospy.loginfo('%s PlanTrajectoryWrapper: Updating model...' % (rospy.get_name()))
@@ -263,7 +272,7 @@ class PlanTrajectoryWrapper:
         if response.motion_plan_response.error_code.val == response.motion_plan_response.error_code.SUCCESS:
             return plan_time, [pt.positions for pt in response.motion_plan_response.trajectory.joint_trajectory.points]
             rospy.loginfo("%s Plan Trajectory Wrapper: service call to %s was unsuccessful"
-            % (rospy.get_name(), planner_client.resolved_name))
+                % (rospy.get_name(), planner_client.resolved_name))
             return plan_time, None
 
     def neural_plan_trajectory(self, start_point, goal_point, planner_number, joint_names, group_name, planning_time, planner_config_name, plan_type='pfs'):
@@ -290,18 +299,18 @@ class PlanTrajectoryWrapper:
         """
         # TODO: add hybrid planning for Baxter environment
         """
-        rospy.loginfo('%s Plan Trajectory Wrapper: using neural network for planning...' \
+        rospy.loginfo('%s Neural Plan Trajectory Wrapper: using neural network for planning...' \
             % (rospy.get_name()))
         # obtain obstacle information through rostopic
-        rospy.loginfo("%s Plan Trajectory Wrapper: waiting for obstacle message..." % (rospy.get_name()))
+        rospy.loginfo("%s Neural Plan Trajectory Wrapper: waiting for obstacle message..." % (rospy.get_name()))
         obs = rospy.wait_for_message('obstacles/obs', Float64Array)
         obs = obs.values
         obs = torch.FloatTensor(obs)
-        rospy.loginfo("%s Plan Trajectory Wrapper: obstacle message received." % (rospy.get_name()))
+        rospy.loginfo("%s Neural Plan Trajectory Wrapper: obstacle message received." % (rospy.get_name()))
         step_sz = DEFAULT_STEP
         MAX_NEURAL_REPLAN = 11
-        path = [torch.FloatTensor(start_point[10:17]), torch.FloatTensor(goal_point[10:17])]
-        print('path to plan...')
+        path = [torch.FloatTensor(start_point), torch.FloatTensor(goal_point)]
+        print('Neural path to plan...')
         print(path)
         mpNet = self.neural_planners[0]
         # obtain robot init state, we only change part of the state later
@@ -336,12 +345,17 @@ class PlanTrajectoryWrapper:
                                     self.normalize_func, self.unnormalize_func, t==0, step_sz=step_sz, \
                                     time_flag=time_flag, device=self.device)
                 time_norm = 0
+            lvc_start = time.time()
             path = plan_general.lvc(path, obs, IsInCollision, step_sz=step_sz)
+            print('Neural Planner: lvc time: %f' % (time.time() - lvc_start))
             if plan_general.feasibility_check(path, obs, IsInCollision, step_sz=0.01):
                 fp = 1
                 rospy.loginfo('%s Nueral Planner: plan is feasible.' % (rospy.get_name()))
                 break
-            if time.time() - plan_time >= 10.:
+            if self.finished:
+                # if other planner has finished, stop
+                break
+            if time.time() - plan_time >= planning_time:
                 break
         if fp:
             # only for successful paths
@@ -349,9 +363,9 @@ class PlanTrajectoryWrapper:
             plan_time -= time_norm
             print('test time: %f' % (plan_time))
             ## TODO: make sure path is indeed list
-            return plan_time, path, self.normalize_func(path)
+            return plan_time, path
         else:
-            return np.inf, None, None
+            return np.inf, None
 
 
 

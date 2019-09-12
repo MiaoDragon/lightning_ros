@@ -60,7 +60,10 @@ def plan(args):
         envDict = pickle.load(env_f)
 
     obstacles, paths, path_lengths = load_test_dataset_end2end(envs, path_data_path, pcd_data_path, args.path_data_file, importer, NP=args.NP)
-
+    obstacles = obstacles[args.env_idx:args.env_idx+args.N]
+    # remember to change the loading NP above to be all path
+    paths = paths[args.env_idx:args.env_idx+args.N, args.path_idx:args.path_idx+args.NP]
+    path_lengths = path_lengths[args.env_idx:args.env_idx+args.N, args.path_idx:args.path_idx+args.NP]
     rospy.init_node('lightning_client')
     print('loading...')
 
@@ -107,6 +110,7 @@ def plan(args):
     obs_i_pub = rospy.Publisher('lightning/obstacles/obs_i', Int32, queue_size=10)
     length_pub = rospy.Publisher('lightning/planning/path_length_threshold', Float64, queue_size=10)
     obs = obstacles
+
     for i, env_name in enumerate(envs):
         et=[]
         col_env = []
@@ -126,7 +130,8 @@ def plan(args):
         new_pose = envDict['poses'][env_name]
         sceneModifier.permute_obstacles(new_pose)
         # ROS message of obstacle information
-        obs_msg = Float64Array(obs[i])
+        print(obstacles[i])
+        obs_msg = Float64Array(obstacles[i])
         obs_i_msg = Int32(i)
         for j in range(0,path_lengths.shape[1]):
             print ("step: i="+str(i)+" j="+str(j))
@@ -168,14 +173,17 @@ def plan(args):
                 # call lightning service
                 request = GetMotionPlanRequest()
                 request.motion_plan_request.group_name = 'right_arm'
-                request.motion_plan_request.start_state.joint_state.name = robot_state.joint_state.name
+                request.motion_plan_request.start_state.joint_state.name = robot_state.joint_state.name[10:17]
                 filler_robot_state[10:17] = start
-                request.motion_plan_request.start_state.joint_state.position = tuple(filler_robot_state)
+                #request.motion_plan_request.start_state.joint_state.position = tuple(filler_robot_state)
+                request.motion_plan_request.start_state.joint_state.position = tuple(start)
                 filler_robot_state[10:17] = goal
                 request.motion_plan_request.goal_constraints.append(Constraints())
-                for k in xrange(len(filler_robot_state)):
+                #for k in xrange(len(filler_robot_state)):
+                for k in xrange(len(goal)):
                     request.motion_plan_request.goal_constraints[0].joint_constraints.append(JointConstraint())
-                    request.motion_plan_request.goal_constraints[0].joint_constraints[k].position = filler_robot_state[k]
+                    #request.motion_plan_request.goal_constraints[0].joint_constraints[k].position = filler_robot_state[k]
+                    request.motion_plan_request.goal_constraints[0].joint_constraints[k].position = goal[k]
                 request.motion_plan_request.allowed_planning_time = time_limit
 
                 responded = False
@@ -215,26 +223,27 @@ def plan(args):
                     fp_env += 1
                     fp += 1
                     time = respond.motion_plan_response.planning_time
-                    time_path.append(time)
+                    et.append(time)
                     print('feasible')
+                    path = respond.motion_plan_response.trajectory.joint_trajectory.points
+                    path = [p.positions for p in path]
+                    with open(good_paths_path + '/' + env_name + '/fp_%d.' % (j+args.path_idx) + 'pkl', 'wb') as path_f:
+                        pickle.dump(path, path_f)
+                    neural_paths[env_name].append(path)
 
+        et_tot.append(et)
         print("total env paths: ")
         print(tp_env)
         print("feasible env paths: ")
         print(fp_env)
-        print("average collision checks: ")
-        print(np.mean(col_env))
-        print("average time per collision check: ")
-        print(np.mean(col_time_env))
         print("average time: ")
         print(np.mean(et))
         env_data = {}
         env_data['tp_env'] = tp_env
         env_data['fp_env'] = fp_env
         env_data['et_env'] = et
-        env_data['col_env'] = col_env
-        env_data['avg_col_time'] = np.mean(col_time_env)
-        env_data['paths'] = neural_paths[env_name]
+        # we already save the path before, so no need to save it again
+        #env_data['paths'] = neural_paths[env_name]
 
         with open(good_paths_path + '/' + env_name + '/env_data.pkl', 'wb') as data_f:
             pickle.dump(env_data, data_f)
@@ -272,6 +281,9 @@ def plan(args):
 parser = argparse.ArgumentParser()
 parser.add_argument('--N', type=int, default=1)
 parser.add_argument('--NP', type=int, default=10)
+parser.add_argument('--env_idx', type=int, default=0)
+parser.add_argument('--path_idx', type=int, default=0)
+
 
 parser.add_argument('--env_data_path', type=str, default='')
 parser.add_argument('--path_data_path', type=str, default='')
@@ -281,6 +293,7 @@ parser.add_argument('--envs_file', type=str, default='')
 parser.add_argument('--good_path_sample_path', type=str, default='./path_samples/good_path_samples')
 parser.add_argument('--bad_path_sample_path', type=str, default='./path_samples/bad_path_samples')
 parser.add_argument('--experiment_name', type=str, default='test_experiment')
-
+# whether to save path or not
+parser.add_argument('--save_path', type=int, default=0)
 args = parser.parse_args()
 plan(args)

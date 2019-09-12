@@ -41,20 +41,33 @@ def normalize(x, bound):
         bound = torch.Tensor(bound)
         dim = len(x.size())
     if dim == 2:
-        state = x[:, -len(bound)*2:-len(bound)]
-        state = moveit_unscrambler(state, dim)
-        state = state / bound
-        x[:, -len(bound)*2:-len(bound)] = state
-        state = x[:, -len(bound):]
-        state = moveit_unscrambler(state, dim)
-        state = state / bound
-        x[:, -len(bound):] = state
+        if len(x[0]) == len(bound):
+            x = moveit_unscrambler(x, dim)
+            x = x / bound
+        else:
+            # concatenation of obstacle, start and goal
+            state = x[:, -len(bound)*2:-len(bound)]
+            state = moveit_unscrambler(state, dim)
+            state = state / bound
+            x[:, -len(bound)*2:-len(bound)] = state
+            state = x[:, -len(bound):]
+            state = moveit_unscrambler(state, dim)
+            state = state / bound
+            x[:, -len(bound):] = state
     elif dim == 1:
-        state = x[-len(bound):]
-        state = moveit_unscrambler(state, dim)
-        state = state / bound
-        x[-len(bound):] = state
-
+        if len(x) == len(bound):
+            x = moveit_unscrambler(x, dim)
+            x = x / bound
+        else:
+            # concatenation of obstacle, start and goal
+            state = x[-len(bound)*2:-len(bound)]
+            state = moveit_unscrambler(state, dim)
+            state = state / bound
+            x[-len(bound)*2:-len(bound)] = state
+            state = x[-len(bound):]
+            state = moveit_unscrambler(state, dim)
+            state = state / bound
+            x[-len(bound):] = state
     return x
 def unnormalize(x, bound):
     # depending on the type of x, change bound
@@ -68,18 +81,30 @@ def unnormalize(x, bound):
         bound = torch.Tensor(bound)
         dim = len(x.size())
     if dim ==2:
-        state = x[:,-len(bound)*2:-len(bound)]
-        state = state * bound
-        state = moveit_scrambler(state, dim)
-        x[:,-len(bound)*2:-len(bound)] = state
-        state = x[:,-len(bound):]
-        state = state * bound
-        state = moveit_scrambler(state, dim)
-        x[:,-len(bound):] = state
+        if len(x[0]) == len(bound):
+            x = x * bound
+            x = moveit_scrambler(x, dim)
+        else:
+            state = x[:,-len(bound)*2:-len(bound)]
+            state = state * bound
+            state = moveit_scrambler(state, dim)
+            x[:,-len(bound)*2:-len(bound)] = state
+            state = x[:,-len(bound):]
+            state = state * bound
+            state = moveit_scrambler(state, dim)
+            x[:,-len(bound):] = state
     elif dim ==1:
-        state = x[-len(bound):]
-        state = state * bound
-        state = moveit_scrambler(state, dim)
-        x[-len(bound):] = state
-
+        if len(x) == len(bound):
+            x = x * bound
+            x = moveit_scrambler(x, dim)
+        else:
+            # concatenation of obs, start and goal
+            state = x[-len(bound)*2:-len(bound)]
+            state = state * bound
+            state = moveit_scrambler(state, dim)
+            x[-len(bound)*2:-len(bound)] = state
+            state = x[-len(bound):]
+            state = state * bound
+            state = moveit_scrambler(state, dim)
+            x[-len(bound):] = state
     return x

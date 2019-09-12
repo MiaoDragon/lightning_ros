@@ -123,6 +123,7 @@ class RRNode:
 
         #if draw_points is True, then display points in rviz
         self.draw_points = rospy.get_param("draw_points")
+        self.DrawPointsWrapper = DrawPointsWrapper
         if self.draw_points:
             self.draw_points_wrapper = DrawPointsWrapper()
         self._call_classic_planner_res = [None, None]
@@ -264,11 +265,11 @@ class RRNode:
         if self.draw_points:
             if repaired_path is not None and len(repaired_path) > 0:
                 rospy.loginfo("RR action server: got repaired section with start = %s, goal = %s" % (repaired_path[0], repaired_path[-1]))
-                self.draw_points_wrapper.draw_points(repaired_path, self.current_group_name, "repaired"+str(start_index)+"_"+str(goal_index), DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREENBLUE, 1.0, 0.01)
+                self.draw_points_wrapper.draw_points(repaired_path, self.current_group_name, "repaired"+str(start_index)+"_"+str(goal_index), self.DrawPointsWrapper.ANGLES, self.DrawPointsWrapper.GREENBLUE, 1.0, 0.01)
         else:
             if self.draw_points:
                 rospy.loginfo("RR action server: path repair for section (%i, %i) failed, start = %s, goal = %s" % (start_index, goal_index, start, goal))
-                self.draw_points_wrapper.draw_points([start, goal], self.current_group_name, "failed_repair"+str(start_index)+"_"+str(goal_index), DrawPointsWrapper.ANGLES, DrawPointsWrapper.GREENBLUE, 1.0)
+                self.draw_points_wrapper.draw_points([start, goal], self.current_group_name, "failed_repair"+str(start_index)+"_"+str(goal_index), self.DrawPointsWrapper.ANGLES, self.DrawPointsWrapper.GREENBLUE, 1.0)
         if self._need_to_stop():
             self._set_repaired_section(index, None)
         else:
@@ -306,13 +307,13 @@ class RRNode:
         """
         if len(projected) > 0:
             if self.draw_points:
-                self.draw_points_wrapper.draw_points(retrieved, self.current_group_name, "retrieved", DrawPointsWrapper.ANGLES, DrawPointsWrapper.WHITE, 0.1)
+                self.draw_points_wrapper.draw_points(retrieved, self.current_group_name, "retrieved", self.DrawPointsWrapper.ANGLES, self.DrawPointsWrapper.WHITE, 0.1)
                 projectionDisplay = projected[:projected.index(retrieved[0])]+projected[projected.index(retrieved[-1])+1:]
-                self.draw_points_wrapper.draw_points(projectionDisplay, self.current_group_name, "projection", DrawPointsWrapper.ANGLES, DrawPointsWrapper.BLUE, 0.2)
+                self.draw_points_wrapper.draw_points(projectionDisplay, self.current_group_name, "projection", self.DrawPointsWrapper.ANGLES, self.DrawPointsWrapper.BLUE, 0.2)
                 invalidDisplay = []
                 for invSec in invalid:
                     invalidDisplay += projected[invSec[0]+1:invSec[-1]]
-                self.draw_points_wrapper.draw_points(invalidDisplay, self.current_group_name, "invalid", DrawPointsWrapper.ANGLES, DrawPointsWrapper.RED, 0.2)
+                self.draw_points_wrapper.draw_points(invalidDisplay, self.current_group_name, "invalid", self.DrawPointsWrapper.ANGLES, self.DrawPointsWrapper.RED, 0.2)
 
     def _retrieve_repair(self, action_goal):
         """
