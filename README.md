@@ -4,7 +4,9 @@
 3. move on to real-world
 
 # Lightning on Baxter environment
-1. launch baxter world, enable baxter and launch baxter moveit planner. (will be provided later)
+1. launch baxter world, enable baxter and launch baxter moveit planner.
+launch baxter_gazebo.launch, baxter_plan_without_sensor.launch under scripts/experiments/baxter
+
 2. launch scripts/experiments/baxter/lightning.launch
 3. in a separate window, run lightning_baxter.sh script under scripts/experiments/baxter
 
