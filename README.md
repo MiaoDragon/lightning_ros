@@ -1,3 +1,8 @@
+# TODO:
+1. record pure planning time (add planning_time field in actions; record planning_time in RR and PFS servers)
+2. combine lightning and VoxelNet
+3. move on to real-world
+
 # Lightning on Baxter environment
 1. launch baxter world, enable baxter and launch baxter moveit planner. (will be provided later)
 2. launch scripts/experiments/baxter/lightning.launch
