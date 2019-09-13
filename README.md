@@ -3,12 +3,19 @@
 2. combine lightning and VoxelNet
 3. move on to real-world
 
+# Setup Lightning framework in a new Robot environment
+1. change the ompl_planning.yaml inside config to be the moveit configuration in the new robot
+2. (if want to change the default planner) change the default planner of every joint
+3. TO BE CONTINUED...
+
+
 # Lightning on Baxter environment
 1. launch baxter world, enable baxter and launch baxter moveit planner.
 launch baxter_gazebo.launch, baxter_plan_without_sensor.launch under scripts/experiments/baxter
 
 2. launch scripts/experiments/baxter/lightning.launch
 3. in a separate window, run lightning_baxter.sh script under scripts/experiments/baxter
+
 
 # Playback planned paths:
 1. launch baxter world, enable baxter and launch baxter moveit planner.

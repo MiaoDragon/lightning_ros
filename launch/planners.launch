@@ -12,6 +12,7 @@
   <!-- currently, two RR planners are used: to change the number used, add another rr_planner node with the next index -->
   <node pkg="lightning" type="planner_stoppable" args="rr_planner0 stop_rr_planning" name="rr_planner_node0" output="screen">
     <param name="default_planner_config" type="string" value="$(arg planner_type)"/>
+    <rosparam command="load" file="$(find lightning)/config/ompl_planning.yaml" />
     <!--
     <rosparam command="load" file="$(find lightning)/config/$(arg arm_config)_arm_groups.yaml" />
     <rosparam command="load" file="$(find lightning)/config/ompl_planning.yaml" />
