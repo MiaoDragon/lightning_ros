@@ -59,7 +59,7 @@ from lightning.msg import Float64Array, Float64Array2D, DrawPoints
 from lightning.srv import CollisionCheck, CollisionCheckRequest, PathShortcut, PathShortcutRequest
 from moveit_commander import PlanningSceneInterface, RobotCommander, MoveGroupCommander, MoveItCommanderException
 from moveit_msgs.srv import GetMotionPlan, GetMotionPlanRequest, GetStateValidity, GetStateValidityRequest, GetStateValidityResponse
-from moveit_msgs.msg import JointConstraint, Constraints
+from moveit_msgs.msg import RobotState, JointConstraint, Constraints
 from std_msgs.msg import UInt8
 from tools import utility
 from tools import plan_general

@@ -8,7 +8,7 @@ DEFAULT_SV_SERVICE = "/check_state_validity"
 
 def stateValidate(robot_state, group_name, constraints=None, print_depth=False):
     sv_srv = rospy.ServiceProxy(DEFAULT_SV_SERVICE, GetStateValidity)
-    rospy.loginfo("Collision Checking by using check_state_validity service...")
+    #rospy.loginfo("Collision Checking by using check_state_validity service...")
     #rospy.wait_for_service(STATE_VALID)
     gsvr = GetStateValidityRequest()
     gsvr.robot_state = robot_state

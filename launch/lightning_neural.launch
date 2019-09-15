@@ -21,9 +21,6 @@
             <param name="num_iterations" value="200" />
             <param name="ignore_fraction" value="0.1" />
         </node>
-
-        <param name="planner_config_name" value="ompl" />
-
         <!-- handles requests for RR planning -->
         <node name="rr_node" pkg="lightning" type="RR_action_server.py" output="screen">
             <param name="num_rr_planners" value="2" />
