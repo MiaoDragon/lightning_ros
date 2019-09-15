@@ -375,6 +375,11 @@ class RRNode:
                 res.status.status = res.status.SUCCESS
                 res.retrieved_path = [Float64Array(p) for p in retrieved]
                 res.repaired_path = [Float64Array(p) for p in repaired]
+                # if total newly generated nodes are 0, it means the library path is not in collision
+                # then we don't need to train on them
+                if total_new_node == 0:
+                    retrieved_planner_type = PlannerType.NEURAL
+                    repaired_planner_type = PlannerType.NEURAL
                 res.retrieved_planner_type.planner_type = retrieved_planner_type
                 res.repaired_planner_type.planner_type = repaired_planner_type
                 # added more information of the planner

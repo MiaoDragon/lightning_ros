@@ -190,7 +190,7 @@ class Lightning:
         self.total_new_node_NN = 0
         self.obs = []
         self.obs_i = []
-
+        self.train_sample = []
 
         if os.path.isfile(self.model_path+'lightning_res.pkl'):
             loaded = utility.load_info(self.model_path+'lightning_res.pkl')
@@ -201,7 +201,7 @@ class Lightning:
             self.plan_mode = loaded['plan_mode']
             self.total_new_nodes = loaded['total_new_node']
             self.total_new_nodes_NN = loaded['total_new_node_NN']
-
+            self.train_sample = loaded['train_sample']
 
     def _notify_update(self, client_name):
         if client_name == 'pfs':
@@ -336,6 +336,7 @@ class Lightning:
         # depending on retrieved_planner_type and final_planner, train the network
         if (retrieved_planner_type is None and final_planner_type == PlannerType.NEURAL) \
             or (retrieved_planner_type == PlannerType.NEURAL and final_planner_type == PlannerType.NEURAL):
+            self.train_sample.append(0)  # no path trained
             to_save = {}
             to_save['loss'] = self.losses
             to_save['total_num_paths'] = self.total_num_paths
@@ -344,6 +345,7 @@ class Lightning:
             to_save['plan_mode'] = self.plan_mode
             to_save['total_new_node'] = self.total_new_nodes
             to_save['total_new_node_NN'] = self.total_new_nodes_NN
+            to_save['train_sample'] = self.train_sample
             utility.save_info(to_save, self.model_path+'lightning_res.pkl')
             return
         rospy.loginfo('Lightning: Training Neural Network...')
@@ -374,6 +376,9 @@ class Lightning:
         bt=utility.to_var(bt, self.device)
         self.model.observe(bi, 0, bt)
         self.num_path_trained += 1
+        # record the number of samples trained
+        train_sample = len(dataset)
+        self.train_sample.append(train_sample)
         # rehersal
         if self.num_path_trained % self.freq_rehersal == 0 and len(self.data_all) > self.batch_rehersal:
             rospy.loginfo('Lightning: Rehersal...')
@@ -408,6 +413,7 @@ class Lightning:
             to_save['plan_mode'] = self.plan_mode
             to_save['total_new_node'] = self.total_new_nodes
             to_save['total_new_node_NN'] = self.total_new_nodes_NN
+            to_save['train_sample'] = self.train_sample
             utility.save_info(to_save, self.model_path+'lightning_res.pkl')
 
         # write trained model to file
