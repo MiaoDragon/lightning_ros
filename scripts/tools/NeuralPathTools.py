@@ -106,6 +106,13 @@ class PlanTrajectoryWrapper:
             num_planners (int): The number of planner nodes that are being used.
         """
         # depending on argument, choose to use either OMPL direct planning or MoveIt
+        framework_type = rospy.get_param('framework_type')
+        if framework_type == 'moveit':
+            # wait for collision checking service
+            rospy.loginfo('%s PlanTrajectoryWrapper: waiting for collision checking service...' % (rospy.get_name()))
+            rospy.wait_for_service(STATE_VALID)
+            rospy.loginfo('%s PlanTrajectoryWrapper: collision checking service acquired.' % (rospy.get_name()))
+
         self.planners = ["%s_planner_node%i/%s" % (node_type, i, PLANNER_NAME) for i in xrange(num_planners)]
         rospy.loginfo("Initializaing %i planners for %s" % (num_planners, node_type))
         self.planners_available = [True for i in xrange(num_planners)]
@@ -136,10 +143,6 @@ class PlanTrajectoryWrapper:
         self.normalize_func=lambda x: self.normalize(x, self.world_size)
         self.unnormalize_func=lambda x: self.unnormalize(x, self.world_size)
         self.finished = False
-        # wait for collision checking service
-        rospy.loginfo('%s PlanTrajectoryWrapper: waiting for collision checking service...' % (rospy.get_name()))
-        rospy.wait_for_service(STATE_VALID)
-        rospy.loginfo('%s PlanTrajectoryWrapper: collision checking service acquired.' % (rospy.get_name()))
 
 
     def _update_model(self, goal):
