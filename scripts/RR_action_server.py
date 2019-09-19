@@ -63,7 +63,7 @@ from lightning.msg import Float64Array, RRAction, RRResult
 from lightning.msg import StopPlanning, RRStats
 from lightning.msg import PlannerType
 from lightning.srv import ManagePathLibrary, ManagePathLibraryResponse
-from std_msgs.msg import UInt8
+from std_msgs.msg import UInt8, Int32, Float32
 import sys
 import pickle
 import time
