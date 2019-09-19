@@ -128,6 +128,8 @@ class RRNode:
             self.draw_points_wrapper = DrawPointsWrapper()
         self._call_classic_planner_res = [None, None]
         self._call_neural_planner_res = [None, None]
+        # record the obstacle index for updating the library
+        self.obs_i = -1
     def _set_repaired_section(self, index, section):
         """
           After you have done the path planning to repair a section, store
@@ -321,6 +323,19 @@ class RRNode:
         """
         self.working_lock.acquire()
         self.start_time = time.time()
+        # obtain the obstacle id
+        obs_i = rospy.wait_for_message('obstacles/obs_i', Int32)
+        obs_i = obs_i.data
+        # if obstacle id is a new id, then load a new library
+        if obs_i != self.obs_i:
+            # new id
+            self.obs_i = obs_i
+            # new robot name: [robot_name]_[obs_id]
+            # first try loading the existing library, if not found, then create a new one
+            res = self.path_library._load_library(self, self.robot_name+'_%d' % (obs_i), self.current_joint_names)
+            if res == False:
+                self.path_library._create_and_load_new_library(self, self.robot_name+'_%d' % (obs_i), self.current_joint_names)
+        # otherwise continue using current library
         self.stats_msg = RRStats()
         self._set_stop_value(False)
         if self.draw_points:
