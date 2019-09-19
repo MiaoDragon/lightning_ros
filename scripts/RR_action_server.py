@@ -332,9 +332,9 @@ class RRNode:
             self.obs_i = obs_i
             # new robot name: [robot_name]_[obs_id]
             # first try loading the existing library, if not found, then create a new one
-            res = self.path_library._load_library(self, self.robot_name+'_%d' % (obs_i), self.current_joint_names)
+            res = self.path_library._load_library(self.robot_name+'_%d' % (obs_i), self.current_joint_names)
             if res == False:
-                self.path_library._create_and_load_new_library(self, self.robot_name+'_%d' % (obs_i), self.current_joint_names)
+                self.path_library._create_and_load_new_library(self.robot_name+'_%d' % (obs_i), self.current_joint_names)
         # otherwise continue using current library
         self.stats_msg = RRStats()
         self._set_stop_value(False)
