@@ -175,8 +175,10 @@ class Lightning:
         #self.model_lock = threading.Lock()
         #self.read_or_write = -1  # -1 for idle, 0 for write, 1+ for read
         rospy.loginfo('Lightning: Notify planner to update network...')
-        self._notify_update('pfs')
-        self._notify_update('rr')
+        if self.use_pfs:
+            self._notify_update('pfs')
+        if self.use_rr:
+            self._notify_update('rr')
 
         # for information of training
         self.losses = []
@@ -421,8 +423,10 @@ class Lightning:
         # notify planners to update the model
         msg = UInt8(0)
         rospy.loginfo('Lightning: Notify planner to update network...')
-        self._notify_update('pfs')
-        self._notify_update('rr')
+        if self.use_pfs:
+            self._notify_update('pfs')
+        if self.use_rr:
+            self._notify_update('rr')
 
     def _print_error(self, msg):
         rospy.logerr("***ERROR*** %s ***ERROR***" % (msg))
