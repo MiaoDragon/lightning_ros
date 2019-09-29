@@ -1,7 +1,7 @@
 <!-- loading lightning launch file, and set parameters -->
 <launch>
   <include file="$(find lightning)/launch/lightning_neural_OMPL_pfs.launch"/>
-  <param name="/lightning/robot_name" value="point_s2d" />
+  <param name="/lightning/robot_name" value="pfs_spoint_s2d" />
   <param name="/lightning/step_size" value="1.0" />
   <param name="/lightning/env_name" value="s2d" />
   <param name="/lightning/planner_name" value="rrtstar" />
