@@ -15,9 +15,12 @@ memory_strength: 0.5
 grad_step: 1
 opt_type: 'Adagrad'
 learning_rate: 0.001
-server_device: 'cpu'
-pfs_device: 'cpu'
-rr_device: 'cpu'
+#server_device: 'cpu'
+#pfs_device: 'cpu'
+#rr_device: 'cpu'
+server_device: 'cuda:3'
+pfs_device: 'cuda:2'
+rr_device: 'cuda:0'
 freq_rehersal: 100
 batch_rehersal: 100
 # how many trained paths before next save
