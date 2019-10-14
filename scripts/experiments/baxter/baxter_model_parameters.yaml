@@ -1,6 +1,7 @@
 mlp_arch_path: 'architecture.model_baxter'
 cae_arch_path: 'architecture.AE.CAE_baxter'
-model_path: '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/results/baxter/'
+#model_path: '/home/yinglong/Documents/MotionPlanning/baxter/ros_ws/src/lightning_ros/results/baxter/'
+model_path: '/home/arclabdl1/YLmiao/catkin_ws/src/mpnet_lightning_ros/results/baxter/'
 model_name: 'model_baxter.pkl'
 normalizer_path: 'experiments.baxter.utility_baxter'
 world_size: [3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67]
