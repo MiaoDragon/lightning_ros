@@ -1,0 +1,35 @@
+<launch>
+    <!-- all lightning default parameters are set here -->
+    <group ns="lightning">
+        <param name="robot_name" value="point" />
+        <param name="step_size" value="0.01" />
+        <param name="increment" value="1" />
+        <param name="draw_points" value='false' />
+        <param name="publish_stats" value="false" />
+        <param name="framework_type" value="moveit" />
+        <param name="env_name" value="s2d" />
+        <param name="planner_name" value="rrtstar" />
+        <!-- <remap from="register_planning_scene" to="/register_planning_scene" />-->
+
+        <!-- don't need to load planners for RR and PFS, because it is taken care of by OMPL -->
+        <include file="$(find lightning)/launch/planners.launch"/>
+        <node name="collision_check_service" pkg="lightning" type="collision_check_service" output="screen">
+            <param name="num_threads" value="4" />
+        </node>
+
+        <node name="path_shortcutter_service" pkg="lightning" type="path_shortcutter" output="screen">
+            <param name="num_iterations" value="200" />
+            <param name="ignore_fraction" value="0.1" />
+        </node>
+        <!-- handles requests for PFS planning -->
+        <node name="pfs_node" pkg="lightning" type="PFS_action_server.py" output="screen">
+        </node>
+
+        <!-- receives planning requests and routes them to RR and/or PFS -->
+        <node name="lightning" pkg="lightning" type="run_lightning.py" output="screen">
+            <param name="store_paths" value="false" />
+            <param name="use_RR" value="false" />
+            <param name="use_PFS" value="true" />
+        </node>
+    </group>
+</launch>
