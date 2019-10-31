@@ -48,8 +48,8 @@ def IsInCollision(state, print_depth=False):
     return (not collision_free)
 
 def main(args):
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-    os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % (args.device)
+    #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % (args.device)
 
     importer = fileImport()
     env_data_path = args.env_data_path
