@@ -200,6 +200,13 @@ def main(args):
                 for l in range(0,dof):
                     goal[l]=paths[i][j][path_lengths[i][j]-1][l]
 
+                print('checking if collision detector is working...')
+                print('steering from start to first waypoint...')
+                if steerTo(paths[i][j][0],paths[i][j][1], IsInCollision):
+                    print('reached.')
+                else:
+                    print('not reached.')
+
                 if (IsInCollision(goal)):
                     print("GOAL IN COLLISION --- BREAKING")
                     goal_collision.append(j)
