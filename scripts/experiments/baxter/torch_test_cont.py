@@ -14,8 +14,7 @@ import pickle
 from path_data_loader import load_test_dataset_end2end
 from torch.autograd import Variable
 import math
-from tools.import_tool import fileImport
-from tools import utility
+from import_tool import fileImport
 import time
 import rospy
 import sys
@@ -26,6 +25,7 @@ from architecture.AE import CAE_baxter
 from neuralplanner_functions import *
 from planning_scene_editor import *
 from get_state_validity import StateValidity
+from tools import utility
 
 joint_ranges = np.array([3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67])
 
