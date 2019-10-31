@@ -68,8 +68,8 @@ def main(args):
         CAE = CAE_baxter
 
     torch.cuda.set_device(args.device)
-    total_input_size = args.encoder_input_size + args.mlp_input_size - args.encoder_output_size
-    model = End2EndMPNet(total_input_size, args.encoder_input_size, args.mlp_input_size, \
+    total_input_size = args.enc_input_size + args.mlp_input_size - args.encoder_output_size
+    model = End2EndMPNet(total_input_size, args.enc_input_size, args.mlp_input_size, \
             args.mlp_output_size, 'deep', 1, 1, 1., 1, CAE, MLP, args.device)
     fname = args.model_path + args.model_name
     if os.path.isfile(fname):
