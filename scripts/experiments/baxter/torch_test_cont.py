@@ -79,7 +79,18 @@ def main(args):
     # create optimizer
     # create this later because I'm not sure if loading previous network weights
     # will overwrite the optimizer parameters
-    utility.create_optimizer(model)
+    opt_type = args.opt_type
+    learning_rate = args.lr
+
+    if opt_type == 'Adagrad':
+        model.set_opt(torch.optim.Adagrad, lr=learning_rate)
+    elif opt_type == 'Adam':
+        model.set_opt(torch.optim.Adam, lr=learning_rate)
+    elif opt_type == 'SGD':
+        model.set_opt(torch.optim.SGD, lr=learning_rate, momentum=0.9)
+    elif opt_type == 'ASGD':
+        model.set_opt(torch.optim.ASGD, lr=learning_rate)
+
     # load optimizer if there exists previous one
     if os.path.isfile(fname):
         utility.load_opt_state(model, fname)
@@ -386,6 +397,8 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='linear')
     parser.add_argument('--N', type=int, default=10)
     parser.add_argument('--NP', type=int, default=100)
+    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--opt_type', type=str, default="Adagrad")
 
     parser.add_argument('--enc_vox_size', type=int, default=28)
     parser.add_argument('--enc_input_size', type=int, default=16053)
