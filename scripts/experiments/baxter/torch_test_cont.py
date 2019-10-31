@@ -75,7 +75,7 @@ def main(args):
     if os.path.isfile(fname):
         utility.load_net_state(model, fname)
     # make sure the new loaded weights are transformed as well
-    model.to(device=device)
+    model.to(device=args.device)
     # create optimizer
     # create this later because I'm not sure if loading previous network weights
     # will overwrite the optimizer parameters
