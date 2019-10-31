@@ -5,7 +5,8 @@ import pickle
 # load_test_dataset_single_paths_only
 import math
 import torch
-
+import torch.nn as nn
+from torch.autograd import Variable
 DEFAULT_STEP = 0.05
 
 def steerTo(start, end, collHandle, step_sz=DEFAULT_STEP, print_depth=False, dof=7):
