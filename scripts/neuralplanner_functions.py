@@ -63,6 +63,21 @@ def collision_check(path, collHandle):
             return 0
     return 1
 
+def to_var(x, volatile=False):
+    if torch.cuda.is_available():
+        x = x.cuda()
+    return Variable(x, volatile=volatile)
+
+
+def get_input(i, dataset, targets, seq, bs):
+    bi = np.zeros((bs, 18), dtype=np.float32)
+    bt = np.zeros((bs, 2), dtype=np.float32)
+    k = 0
+    for b in range(i, i+bs):
+        bi[k] = dataset[seq[i]].flatten()
+        bt[k] = targets[seq[i]].flatten()
+        k = k+1
+    return torch.from_numpy(bi), torch.from_numpy(bt)
 
 
 def is_reaching_target(start1, start2, dof=7):
