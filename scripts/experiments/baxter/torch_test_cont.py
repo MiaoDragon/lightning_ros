@@ -1,3 +1,10 @@
+import sys, os
+import rospkg
+rospack = rospkg.RosPack()
+top_path = rospack.get_path('lightning')
+sys.path.insert(1, top_path+'/scripts')
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 import argparse
 import torch
 import torch.nn as nn
@@ -12,13 +19,13 @@ from tools import utility
 import time
 import rospy
 import sys
-from architectures.GEM_end2end_model import End2EndMPNet
-from architectures import model_baxter
-from architectures.AE import CAE_baxter
+from architecture.GEM_end2end_model import End2EndMPNet
+from architecture import model_baxter
+from architecture.AE import CAE_baxter
 
-from torch_neuralplanner_functions import *
-from tools.planning_scene_editor import *
-from tools.get_state_validity import StateValidity
+from neuralplanner_functions import *
+from planning_scene_editor import *
+from get_state_validity import StateValidity
 
 joint_ranges = np.array([3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67])
 
