@@ -298,7 +298,7 @@ def main(args):
                             g=torch.from_numpy(paths[i][j][path_lengths[i][j]-1])
 
                             tic = time.clock()
-                            path=replan_path(path, g, mlp, IsInCollision, obs=h, step_sz=step_sz) #replanning at coarse level
+                            path=replan_path(path, g, model.mlp, IsInCollision, obs=h, step_sz=step_sz) #replanning at coarse level
                             toc = time.clock()
 
                             if path !=0:
